@@ -1,6 +1,6 @@
 {
   "name": "@miragon/context-maps-webapp",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Context Maps Modeler web application (Vite demo editor).",
@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@miragon/context-maps-cml": "0.0.1",
-    "@miragon/context-maps-renderer": "0.0.1",
-    "@miragon/context-maps-schema-model": "0.0.1",
+    "@miragon/context-maps-renderer": "0.1.0",
+    "@miragon/context-maps-schema-model": "0.1.0",
     "lz-string": "1.5.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
