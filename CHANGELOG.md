@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.0](https://github.com/Miragon/context-maps-modeler/compare/v0.0.1...v0.1.0) (2026-07-15)
+
+
+### Features
+
+* model pretty context maps ([c4ba93e](https://github.com/Miragon/context-maps-modeler/commit/c4ba93e2e4a411917aec491644314a9f7455231a))
+
+
+### Bug Fixes
+
+* draw line between components ([#6](https://github.com/Miragon/context-maps-modeler/issues/6)) ([b11d2b4](https://github.com/Miragon/context-maps-modeler/commit/b11d2b4779df9d73608e85de98bb890408b14313))
+* modelling issues ([#4](https://github.com/Miragon/context-maps-modeler/issues/4)) ([af2c585](https://github.com/Miragon/context-maps-modeler/commit/af2c585633264418ba4463302fd5e8dd18c41904))
+* **webapp:** drive portless dev via portless.json, correct docs, pin portless 0.15.3 ([#16](https://github.com/Miragon/context-maps-modeler/issues/16)) ([f26bd1d](https://github.com/Miragon/context-maps-modeler/commit/f26bd1da41f8929a63f6a0d0250259bc5c29b899))
+
 ## [0.4.0](https://github.com/Miragon/context-maps-modeler/compare/v0.3.1...v0.4.0) (2026-07-07)
 
 
