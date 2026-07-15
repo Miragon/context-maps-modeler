@@ -12,7 +12,7 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json"
   },
   "dependencies": {
-    "@miragon/context-maps-cml": "0.0.1",
+    "@miragon/context-maps-cml": "0.1.0",
     "@miragon/context-maps-renderer": "0.1.0",
     "@miragon/context-maps-schema-model": "0.1.0",
     "lz-string": "1.5.0",
