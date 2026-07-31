@@ -46,7 +46,7 @@ fails `npm run lint` and `npm run depcruise`.
 - `npm run typecheck` · `npm run lint` (ESLint + typecheck)
 - `npm run format` — Prettier · `npm run depcruise` — check the module graph
 
-Requirements: Node ≥ 22.13, npm. The packages are consumed from **source** (Vite/esbuild/tsconfig
+Requirements: Node ≥ 24, npm. The packages are consumed from **source** (Vite/esbuild/tsconfig
 aliases), so neither the apps nor the tests need a prior package build; `npm run build` is for
 publishing the libraries. The Husky pre-commit hook runs **only** lint-staged + `npm run lint`
 (ESLint + type-check) — **not** tests/build/depcruise; run `npm test` yourself before pushing.
