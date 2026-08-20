@@ -1,6 +1,6 @@
 # Context Maps for VS Code
 
-[![VS Marketplace](https://img.shields.io/visual-studio-marketplace/v/miragon-gmbh.context-maps-modeler?label=VS%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=miragon-gmbh.context-maps-modeler)
+[![VS Marketplace](https://vsmarketplacebadges.dev/version-short/miragon-gmbh.context-maps-modeler.svg)](https://marketplace.visualstudio.com/items?itemName=miragon-gmbh.context-maps-modeler)
 [![License: MIT](https://img.shields.io/github/license/Miragon/context-maps-modeler)](https://github.com/Miragon/context-maps-modeler/blob/main/LICENSE)
 
 [Context Maps](https://contextmapper.org/) are the strategic Domain-Driven Design view of a system:
@@ -10,9 +10,6 @@ upstream-downstream, separate ways). This extension lets you create and edit tho
 inside VS Code: it opens `.cm` / `.cm.json` files (a Context Maps diagram stored as plain,
 deterministic JSON) in a graphical editor, while the text file stays the source of truth, so save,
 Git, and diff keep working.
-
-New to the method? Read up on strategic DDD context maps in Kaiser's _Architecture for Flow_ and
-Vernon's _DDD Distilled_.
 
 ## Getting started
 
