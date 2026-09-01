@@ -68,6 +68,7 @@ test("selecting a bounded context shows the quick-action pad", () => {
       "subdomain-type",
       "team",
       "edit-label",
+      "description",
       "delete",
     ]);
 
@@ -143,6 +144,7 @@ test("selecting a relationship offers pattern, roles, swap, rename and delete", 
       "roles",
       "swap-ends",
       "edit-label",
+      "description",
       "delete",
     ]);
   } finally {
@@ -177,7 +179,7 @@ test("the pattern menu switches the pattern and prunes direction-only actions", 
     expect(relationship.pattern).toBe("partnership");
     // symmetric patterns carry no roles and no direction actions
     expect(relationship.upstreamRoles).toBeUndefined();
-    expect(padActions(container)).toEqual(["pattern", "edit-label", "delete"]);
+    expect(padActions(container)).toEqual(["pattern", "edit-label", "description", "delete"]);
     expect(modeler.exportDocument().relationships[0].pattern).toBe("partnership");
 
     modeler.undo();
@@ -188,6 +190,7 @@ test("the pattern menu switches the pattern and prunes direction-only actions", 
       "roles",
       "swap-ends",
       "edit-label",
+      "description",
       "delete",
     ]);
   } finally {
@@ -319,7 +322,7 @@ test("a relationship with an unknown pattern still gets a working pad", () => {
     selection.select(relationship);
     // no direction-only actions for an unknown pattern, but the pattern menu
     // stays available to repair the element
-    expect(padActions(container)).toEqual(["pattern", "edit-label", "delete"]);
+    expect(padActions(container)).toEqual(["pattern", "edit-label", "description", "delete"]);
 
     clickPadEntry(container, "pattern");
     clickMenuEntry("pattern-upstream-downstream");
@@ -502,7 +505,7 @@ test("a multi-selection gets a single delete action", () => {
   }
 });
 
-test("the team action edits the owning team inline", () => {
+test("the team action opens an anchored prompt at the pad, not over the element", () => {
   const { modeler, container } = mount();
   try {
     modeler.importDocument(twoContexts());
@@ -511,15 +514,25 @@ test("the team action edits the owning team inline", () => {
     const [a] = registry.getAll().filter(isCmContext) as CmContext[];
 
     selection.select(a);
+    const entry = container.querySelector<HTMLElement>(
+      '.djs-context-pad.open [data-action="team"]',
+    )!;
     clickPadEntry(container, "team");
 
-    const input = container.querySelector<HTMLInputElement>(
-      '.cm-label-input[data-property="team"]',
-    );
+    const prompt = container.querySelector<HTMLElement>(".cm-pad-prompt");
+    expect(prompt).not.toBeNull();
+    const input = prompt!.querySelector<HTMLInputElement>("input.cm-pad-prompt__field");
     expect(input).not.toBeNull();
     expect(input!.placeholder).toBe("Owning team");
+    // anchored below the pad entry, not centred over the element
+    const entryBounds = entry.getBoundingClientRect();
+    const promptBounds = prompt!.getBoundingClientRect();
+    expect(Math.abs(promptBounds.left - entryBounds.left)).toBeLessThan(2);
+    expect(promptBounds.top).toBeGreaterThan(entryBounds.bottom);
+
     input!.value = "Team Payments";
     input!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(container.querySelector(".cm-pad-prompt")).toBeNull();
     expect(a.team).toBe("Team Payments");
     expect(modeler.exportDocument().contexts.find((c) => c.id === "a")?.team).toBe("Team Payments");
 
@@ -531,22 +544,106 @@ test("the team action edits the owning team inline", () => {
   }
 });
 
-test("the rename action opens the inline label editor", () => {
+test("the description action edits contexts and relationships via the prompt", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(connectedContexts("upstream-downstream"));
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [a] = registry.getAll().filter(isCmContext) as CmContext[];
+    const [relationship] = registry.getAll().filter(isCmRelationship) as CmRelationship[];
+
+    selection.select(a);
+    clickPadEntry(container, "description");
+    const area = container.querySelector<HTMLTextAreaElement>(
+      ".cm-pad-prompt textarea.cm-pad-prompt__field",
+    );
+    expect(area).not.toBeNull();
+    area!.value = "Handles all invoicing.";
+    area!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }),
+    );
+    expect(a.description).toBe("Handles all invoicing.");
+    expect(modeler.exportDocument().contexts.find((c) => c.id === "a")?.description).toBe(
+      "Handles all invoicing.",
+    );
+
+    selection.select(relationship);
+    clickPadEntry(container, "description");
+    const relArea = container.querySelector<HTMLTextAreaElement>(
+      ".cm-pad-prompt textarea.cm-pad-prompt__field",
+    )!;
+    relArea.value = "Invoices flow downstream.";
+    relArea.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }),
+    );
+    expect(relationship.description).toBe("Invoices flow downstream.");
+
+    // Escape discards without committing
+    selection.select(a);
+    clickPadEntry(container, "description");
+    const again = container.querySelector<HTMLTextAreaElement>(
+      ".cm-pad-prompt textarea.cm-pad-prompt__field",
+    )!;
+    again.value = "Discarded";
+    again.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(container.querySelector(".cm-pad-prompt")).toBeNull();
+    expect(a.description).toBe("Handles all invoicing.");
+
+    modeler.undo();
+    expect(relationship.description).toBeUndefined();
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("the rename action edits the name in place (direct editing)", () => {
   const { modeler, container } = mount();
   try {
     modeler.importDocument(twoContexts());
     const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
     const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const canvas = modeler.get<{ getGraphics(el: unknown): SVGElement }>("canvas");
     const [a] = registry.getAll().filter(isCmContext) as CmContext[];
 
     selection.select(a);
     clickPadEntry(container, "edit-label");
 
-    const input = container.querySelector<HTMLInputElement>(".cm-label-input");
-    expect(input).not.toBeNull();
-    input!.value = "Billing";
-    input!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    // the contenteditable box sits inside the canvas, the rendered name hides
+    const content = container.querySelector<HTMLElement>(".djs-direct-editing-content");
+    expect(content).not.toBeNull();
+    expect(content!.getAttribute("contenteditable")).toBe("true");
+    expect(canvas.getGraphics(a).classList.contains("cm-direct-editing")).toBe(true);
+
+    content!.innerText = "Billing";
+    modeler.get<{ complete(): void }>("directEditing").complete();
     expect(a.cmLabel).toBe("Billing");
+    expect(container.querySelector(".djs-direct-editing-content")).toBeNull();
+    expect(canvas.getGraphics(a).classList.contains("cm-direct-editing")).toBe(false);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("double-click activates in-place editing and Escape cancels without a command", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(twoContexts());
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const eventBus = modeler.get<{ fire(name: string, data: unknown): void }>("eventBus");
+    const [a] = registry.getAll().filter(isCmContext) as CmContext[];
+
+    eventBus.fire("element.dblclick", { element: a });
+    const content = container.querySelector<HTMLElement>(".djs-direct-editing-content");
+    expect(content).not.toBeNull();
+
+    content!.innerText = "Discarded";
+    modeler.get<{ cancel(): void }>("directEditing").cancel();
+    expect(container.querySelector(".djs-direct-editing-content")).toBeNull();
+    expect(a.cmLabel).toBe("A");
+    expect(modeler.canUndo()).toBe(false);
   } finally {
     modeler.destroy();
     container.remove();

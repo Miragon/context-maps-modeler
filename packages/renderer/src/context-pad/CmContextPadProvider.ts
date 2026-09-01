@@ -3,9 +3,11 @@
  * embedder of the Modeler gets element-level editing out of the box — not just
  * hosts that build their own inspector.
  *
- *  - Bounded context: connect, change subdomain type (menu), rename, delete.
- *  - Relationship: change pattern (menu); edit integration roles (menu) and
- *    swap ends only while the pattern is asymmetric; rename, delete.
+ *  - Bounded context: append a connected context, connect, subdomain type
+ *    (menu), owning team and description (anchored prompts), rename (in-place
+ *    direct editing), delete.
+ *  - Relationship: pattern (menu); integration roles (menu) and swap ends
+ *    while the pattern is asymmetric; rename, description, delete.
  *  - Multi-selection: delete.
  *
  * Every mutation goes through `cmModeling`/`modeling`, so it is undoable and
@@ -73,6 +75,7 @@ import {
   ICON_ARROW_FORWARD,
   ICON_DELETE,
   ICON_EDIT,
+  ICON_NOTES,
   ICON_SWAP,
   ICON_TEAM,
   ICON_TUNE,
@@ -280,9 +283,18 @@ export default class CmContextPadProvider implements ContextPadProvider {
           iconMarkup(ICON_TEAM),
           `Set owning team — currently ${context.team ?? "none"}`,
         ),
-        action: { click: () => this.labelEditing.activate(context, "team") },
+        action: {
+          click: (event: Event) =>
+            this.openPrompt(event, {
+              value: context.team ?? "",
+              placeholder: "Owning team",
+              label: "Owning team",
+              onCommit: (value) => this.cmModeling.setTeam(context, value || undefined),
+            }),
+        },
       },
       "edit-label": this.editLabelEntry(context, "Rename context"),
+      description: this.descriptionEntry(context, "Purpose, ubiquitous language, notes…"),
       delete: this.deleteEntry([context], "Delete context"),
     };
   }
@@ -422,6 +434,7 @@ export default class CmContextPadProvider implements ContextPadProvider {
       };
     }
     entries["edit-label"] = this.editLabelEntry(relationship, "Edit label");
+    entries.description = this.descriptionEntry(relationship, "What flows here, contracts, notes…");
     entries.delete = this.deleteEntry([relationship], "Delete relationship");
     return entries;
   }
@@ -431,9 +444,128 @@ export default class CmContextPadProvider implements ContextPadProvider {
   private editLabelEntry(element: CmElement, title: string): ContextPadEntry {
     return {
       group: "edit",
-      html: padEntryHtml(iconMarkup(ICON_EDIT), title),
+      html: padEntryHtml(iconMarkup(ICON_EDIT), `${title} — edit the name in place`),
       action: { click: () => this.labelEditing.activate(element) },
     };
+  }
+
+  private descriptionEntry(element: CmElement, placeholder: string): ContextPadEntry {
+    return {
+      group: "edit",
+      html: padEntryHtml(iconMarkup(ICON_NOTES), "Edit description"),
+      action: {
+        click: (event: Event) =>
+          this.openPrompt(event, {
+            value: element.description ?? "",
+            placeholder,
+            label: "Description",
+            multiline: true,
+            onCommit: (value) => this.cmModeling.setDescription(element, value || undefined),
+          }),
+      },
+    };
+  }
+
+  /**
+   * A small input card anchored below the clicked pad entry (like the popup
+   * menus) — for the free-text properties, which should not open centred over
+   * the element. Enter (Ctrl/Cmd+Enter in the multiline variant) and blur
+   * commit, Escape cancels.
+   */
+  private activePrompt?: { cancel(): void };
+
+  private openPrompt(
+    event: Event,
+    config: {
+      value: string;
+      placeholder: string;
+      label: string;
+      multiline?: boolean;
+      onCommit(value: string): void;
+    },
+  ): void {
+    this.activePrompt?.cancel();
+    const anchor = ((event as { delegateTarget?: EventTarget }).delegateTarget ??
+      event.target) as HTMLElement;
+    const bounds = anchor.getBoundingClientRect();
+
+    const card = document.createElement("div");
+    card.className = "cm-pad-prompt";
+    card.style.left = `${bounds.left}px`;
+    card.style.top = `${bounds.bottom + MENU_GAP}px`;
+
+    const field = document.createElement(config.multiline ? "textarea" : "input") as
+      HTMLInputElement | HTMLTextAreaElement;
+    field.className = "cm-pad-prompt__field";
+    field.value = config.value;
+    field.placeholder = config.placeholder;
+    field.setAttribute("aria-label", config.label);
+    if (field instanceof HTMLTextAreaElement) field.rows = 4;
+    card.appendChild(field);
+
+    if (config.multiline) {
+      const hint = document.createElement("div");
+      hint.className = "cm-pad-prompt__hint";
+      hint.textContent = "Esc to cancel · ⌘/Ctrl+Enter to save";
+      card.appendChild(hint);
+    }
+
+    this.canvas.getContainer().appendChild(card);
+    // Keep the card on screen when the pad entry sits at a viewport edge.
+    const cardBounds = card.getBoundingClientRect();
+    const margin = 8;
+    if (cardBounds.right > window.innerWidth - margin) {
+      card.style.left = `${Math.max(margin, window.innerWidth - margin - cardBounds.width)}px`;
+    }
+    if (cardBounds.bottom > window.innerHeight - margin) {
+      card.style.top = `${Math.max(margin, bounds.top - cardBounds.height - MENU_GAP)}px`;
+    }
+    field.focus();
+    if (field instanceof HTMLTextAreaElement) {
+      // Select-all in a filled textarea makes the first keystroke wipe the
+      // text — park the caret at the end instead.
+      field.setSelectionRange(field.value.length, field.value.length);
+    } else {
+      field.select();
+    }
+
+    // The card is viewport-anchored — commit before the canvas moves away
+    // underneath it (mirrors the direct-editing guard).
+    const onViewboxChanging = (): void => commit();
+    this.eventBus.on("canvas.viewbox.changing", onViewboxChanging);
+
+    let done = false;
+    const cleanup = (): void => {
+      if (done) return;
+      done = true;
+      this.eventBus.off("canvas.viewbox.changing", onViewboxChanging);
+      card.remove();
+      this.activePrompt = undefined;
+      (this.canvas as { restoreFocus?: () => void }).restoreFocus?.();
+    };
+    const commit = (): void => {
+      if (done) return;
+      const value = field.value.trim();
+      const changed = value !== config.value.trim();
+      cleanup();
+      if (changed) config.onCommit(value);
+    };
+    field.addEventListener("keydown", (event: Event) => {
+      const keyEvent = event as KeyboardEvent;
+      if (keyEvent.key === "Escape") {
+        keyEvent.preventDefault();
+        keyEvent.stopPropagation();
+        cleanup();
+      } else if (
+        keyEvent.key === "Enter" &&
+        (!config.multiline || keyEvent.ctrlKey || keyEvent.metaKey)
+      ) {
+        keyEvent.preventDefault();
+        commit();
+      }
+    });
+    field.addEventListener("blur", commit);
+    this.activePrompt = { cancel: cleanup };
   }
 
   private deleteEntry(elements: CmElement[], title: string): ContextPadEntry {

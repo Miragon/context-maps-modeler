@@ -361,6 +361,8 @@ export default class ContextMapsRenderer extends BaseRenderer {
     const startY = h / 2 - ((lines.length - 1) * lineHeight) / 2;
     lines.forEach((ln, idx) => {
       const t = svgAttr(svgCreate("text"), {
+        // `cm-name` lets the direct-editing marker hide the rendered name.
+        class: "cm-name",
         x: w / 2,
         y: startY + idx * lineHeight,
         "font-family": FONT.family,

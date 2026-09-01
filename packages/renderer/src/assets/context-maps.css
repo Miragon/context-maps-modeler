@@ -475,20 +475,53 @@
   pointer-events: none;
 }
 
-/* --- Inline label editor -------------------------------------------------- */
-.cm-djs-container .cm-label-input {
+/* --- In-place direct editing (name inside the element, bpmn.io style) ----- */
+/* While an element's name is edited, the rendered text is hidden so the
+   contenteditable box is the only visible copy. */
+.cm-direct-editing .djs-visual text.cm-name {
+  display: none;
+}
+.cm-djs-container .djs-direct-editing-parent {
+  z-index: 150;
+  color: var(--cm-ink, #1d1d1d);
+}
+.cm-djs-container .djs-direct-editing-content {
+  caret-color: var(--cm-accent, #335de5);
+}
+
+/* --- Anchored free-text prompt (owning team / description via the pad) ---- */
+.cm-pad-prompt {
+  position: fixed;
+  z-index: 210;
+  min-width: 240px;
+  padding: 8px;
+  background: var(--cd-weiss, #fff);
+  border: 1px solid var(--cm-line, #e6e2e2);
+  border-radius: var(--cd-radius-md, 12px);
+  box-shadow: var(--cd-shadow-3, 0 12px 32px rgba(29, 29, 29, 0.16));
+}
+.cm-pad-prompt__field {
+  display: block;
+  width: 100%;
   font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 600;
-  text-align: center;
-  padding: 3px 6px;
-  border: 1.5px solid var(--cm-accent);
-  border-radius: var(--cd-radius-sm);
-  background: var(--cd-weiss);
-  color: var(--cm-ink);
+  font-size: 13px;
+  color: var(--cm-ink, #1d1d1d);
+  padding: 6px 8px;
+  border: 1px solid var(--cm-line, #e6e2e2);
+  border-radius: var(--cd-radius-sm, 6px);
+  background: #f3f1f1;
   outline: none;
-  box-shadow: 0 4px 14px rgba(51, 93, 229, 0.2);
-  z-index: 100;
+  resize: vertical;
+}
+.cm-pad-prompt__field:focus {
+  border-color: var(--cm-accent, #335de5);
+  box-shadow: 0 0 0 2px rgba(51, 93, 229, 0.12);
+  background: var(--cd-weiss, #fff);
+}
+.cm-pad-prompt__hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #5b5b5b;
 }
 
 /* --- Validation markers (semantic-rule findings on the canvas) ------------ */
