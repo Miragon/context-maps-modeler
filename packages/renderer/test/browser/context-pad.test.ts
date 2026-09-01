@@ -80,6 +80,28 @@ test("selecting a bounded context shows the quick-action pad", () => {
   }
 });
 
+test("the pad stacks its actions vertically as individual cards", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(twoContexts());
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [a] = registry.getAll().filter(isCmContext);
+    selection.select(a);
+
+    const entries = [...container.querySelectorAll(".djs-context-pad.open .entry.cm-pad-entry")];
+    expect(entries.length).toBeGreaterThan(2);
+    const boxes = entries.map((entry) => entry.getBoundingClientRect());
+    for (let index = 1; index < boxes.length; index += 1) {
+      expect(boxes[index].top).toBeGreaterThanOrEqual(boxes[index - 1].bottom);
+      expect(Math.abs(boxes[index].left - boxes[0].left)).toBeLessThan(1);
+    }
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
 test("the subdomain-type menu classifies the context through the command stack", () => {
   const { modeler, container } = mount();
   try {
@@ -333,7 +355,7 @@ test("a relationship with an unknown pattern still gets a working pad", () => {
   }
 });
 
-test("the pad is clamped back into view at the canvas edge", async () => {
+test("the pad is clamped back into view at the right canvas edge", async () => {
   const { modeler, container } = mount();
   try {
     const doc = emptyDocument("m");
@@ -343,21 +365,103 @@ test("the pad is clamped back into view at the canvas edge", async () => {
     modeler.importDocument(doc);
     const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
     const selection = modeler.get<{ select(el: unknown): void }>("selection");
-    const canvas = modeler.get<{ viewbox(box?: object): { scale: number } }>("canvas");
+    const canvas = modeler.get<{ viewbox(box?: object): unknown; getContainer(): HTMLElement }>(
+      "canvas",
+    );
     const [a] = registry.getAll().filter(isCmContext);
 
-    // place the shape at the right canvas edge — the pad would overflow and be
+    // scale-1 viewbox putting the shape's right edge 10px short of the right
+    // border: the pad (anchored 8px right of the shape) would overflow and be
     // clipped by the container's overflow: hidden
-    canvas.viewbox({ x: -650, y: -150, width: 900, height: 640 });
+    const inner = canvas.getContainer().getBoundingClientRect();
+    canvas.viewbox({ x: 210 - inner.width, y: -20, width: inner.width, height: inner.height });
     selection.select(a);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     const pad = container.querySelector<HTMLElement>(".djs-context-pad.open");
     expect(pad).not.toBeNull();
     const padBounds = pad!.getBoundingClientRect();
-    const containerBounds = container.getBoundingClientRect();
-    expect(padBounds.right).toBeLessThanOrEqual(containerBounds.right);
     expect(padBounds.width).toBeGreaterThan(0);
+    expect(padBounds.right).toBeLessThanOrEqual(inner.right);
+    expect(padBounds.left).toBeGreaterThanOrEqual(inner.left);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("a flipped connection pad is clamped back in at the left canvas edge", async () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(connectedContexts("upstream-downstream"));
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const canvas = modeler.get<{ viewbox(box?: object): unknown; getContainer(): HTMLElement }>(
+      "canvas",
+    );
+    const [relationship] = registry.getAll().filter(isCmRelationship);
+
+    // the pad anchor (the last waypoint, on the target's left edge at x=600)
+    // lands 10px inside the left border — the flip-x transform would carry
+    // the whole stack outside the container
+    const inner = canvas.getContainer().getBoundingClientRect();
+    canvas.viewbox({ x: 590, y: 150, width: inner.width, height: inner.height });
+    selection.select(relationship);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const pad = container.querySelector<HTMLElement>(".djs-context-pad.open");
+    expect(pad).not.toBeNull();
+    expect(pad!.classList.contains("cm-pad-flip-x")).toBe(true);
+    const padBounds = pad!.getBoundingClientRect();
+    expect(padBounds.width).toBeGreaterThan(0);
+    expect(padBounds.left).toBeGreaterThanOrEqual(inner.left);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("popup menus open beside their pad entry and dodge the pad at the right edge", async () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(twoContexts());
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const canvas = modeler.get<{ viewbox(box?: object): unknown; getContainer(): HTMLElement }>(
+      "canvas",
+    );
+    const [a] = registry.getAll().filter(isCmContext);
+    const inner = canvas.getContainer().getBoundingClientRect();
+    const documentWidth = document.documentElement.getBoundingClientRect().width;
+
+    // room to the right: the menu opens beside the entry, top-aligned
+    canvas.viewbox({ x: 292, y: 150, width: inner.width, height: inner.height });
+    selection.select(a);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    const entry = container.querySelector('.djs-context-pad.open [data-action="subdomain-type"]');
+    const entryBounds = entry!.getBoundingClientRect();
+    clickPadEntry(container, "subdomain-type");
+    const besideBounds = document.querySelector(".djs-popup")!.getBoundingClientRect();
+    expect(besideBounds.left).toBeGreaterThanOrEqual(entryBounds.right);
+    expect(Math.abs(besideBounds.top - entryBounds.top)).toBeLessThanOrEqual(6);
+
+    // at the right edge PopupMenu flips the menu back across its anchor — it
+    // must end up fully left of the pad column, not on top of it
+    selection.select(null);
+    canvas.viewbox({
+      x: 300 + inner.left + 10 - documentWidth,
+      y: 150,
+      width: inner.width,
+      height: inner.height,
+    });
+    selection.select(a);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    const pad = container.querySelector<HTMLElement>(".djs-context-pad.open");
+    const padBounds = pad!.getBoundingClientRect();
+    clickPadEntry(container, "subdomain-type");
+    const flippedBounds = document.querySelector(".djs-popup")!.getBoundingClientRect();
+    expect(flippedBounds.right).toBeLessThanOrEqual(padBounds.left + 0.5);
+    modeler.get<{ close(): void }>("popupMenu").close();
   } finally {
     modeler.destroy();
     container.remove();

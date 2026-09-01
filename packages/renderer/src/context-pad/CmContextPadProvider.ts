@@ -217,13 +217,22 @@ export default class CmContextPadProvider implements ContextPadProvider {
       if (overflowRight > 0) {
         pad.style.left = `${parseFloat(pad.style.left || "0") - overflowRight}px`;
       }
-      const overflowTop = containerBounds.top + margin - padBounds.top;
-      if (overflowTop > 0) {
-        pad.style.top = `${parseFloat(pad.style.top || "0") + overflowTop}px`;
+      // The cm-pad-flip-x transform can carry a connection's pad past the
+      // LEFT border (its anchor is the unclamped last waypoint).
+      const overflowLeft = containerBounds.left + margin - padBounds.left;
+      if (overflowLeft > 0) {
+        pad.style.left = `${parseFloat(pad.style.left || "0") + overflowLeft}px`;
       }
+      // Vertically pull an overflowing pad up — but never past the top
+      // border: when the stack is taller than the canvas, the top actions
+      // stay reachable rather than none of them.
+      let shiftY = 0;
       const overflowBottom = padBounds.bottom - (containerBounds.bottom - margin);
-      if (overflowBottom > 0) {
-        pad.style.top = `${parseFloat(pad.style.top || "0") - overflowBottom}px`;
+      if (overflowBottom > 0) shiftY = -overflowBottom;
+      const overflowTop = containerBounds.top + margin - (padBounds.top + shiftY);
+      if (overflowTop > 0) shiftY += overflowTop;
+      if (shiftY !== 0) {
+        pad.style.top = `${parseFloat(pad.style.top || "0") + shiftY}px`;
       }
     }, "cmContextPad#clampIntoView");
   }
@@ -375,15 +384,7 @@ export default class CmContextPadProvider implements ContextPadProvider {
         .getContainer()
         .querySelector<HTMLElement>('.djs-context-pad.open [data-action="subdomain-type"]');
       if (!entry) return;
-      const bounds = entry.getBoundingClientRect();
-      const position = { x: bounds.left, y: bounds.bottom + MENU_GAP };
-      this.currentMenu = {
-        element: context,
-        menuId: SUBDOMAIN_MENU,
-        title: "Subdomain type",
-        position,
-      };
-      this.popupMenu.open(context, SUBDOMAIN_MENU, position, { title: "Subdomain type" });
+      this.openMenuBeside(entry.getBoundingClientRect(), context, SUBDOMAIN_MENU, "Subdomain type");
     }, "cmContextPad#openTypeMenu");
   }
 
@@ -459,10 +460,11 @@ export default class CmContextPadProvider implements ContextPadProvider {
   }
 
   /**
-   * A small input card anchored below the clicked pad entry (like the popup
-   * menus) — for the free-text properties, which should not open centred over
-   * the element. Enter (Ctrl/Cmd+Enter in the multiline variant) and blur
-   * commit, Escape cancels.
+   * A small input card anchored beside the clicked pad entry (like the popup
+   * menus — below would cover the rest of the vertical stack) — for the
+   * free-text properties, which should not open centred over the element.
+   * Enter (Ctrl/Cmd+Enter in the multiline variant) and blur commit, Escape
+   * cancels.
    */
   private activePrompt?: { cancel(): void };
 
@@ -483,8 +485,8 @@ export default class CmContextPadProvider implements ContextPadProvider {
 
     const card = document.createElement("div");
     card.className = "cm-pad-prompt";
-    card.style.left = `${bounds.left}px`;
-    card.style.top = `${bounds.bottom + MENU_GAP}px`;
+    card.style.left = `${bounds.right + MENU_GAP}px`;
+    card.style.top = `${bounds.top}px`;
 
     const field = document.createElement(config.multiline ? "textarea" : "input") as
       HTMLInputElement | HTMLTextAreaElement;
@@ -503,14 +505,15 @@ export default class CmContextPadProvider implements ContextPadProvider {
     }
 
     this.canvas.getContainer().appendChild(card);
-    // Keep the card on screen when the pad entry sits at a viewport edge.
+    // Keep the card on screen when the pad entry sits at a viewport edge:
+    // no room on the right → flip to the entry's left, bottom → shift up.
     const cardBounds = card.getBoundingClientRect();
     const margin = 8;
     if (cardBounds.right > window.innerWidth - margin) {
-      card.style.left = `${Math.max(margin, window.innerWidth - margin - cardBounds.width)}px`;
+      card.style.left = `${Math.max(margin, bounds.left - cardBounds.width - MENU_GAP)}px`;
     }
     if (cardBounds.bottom > window.innerHeight - margin) {
-      card.style.top = `${Math.max(margin, bounds.top - cardBounds.height - MENU_GAP)}px`;
+      card.style.top = `${Math.max(margin, window.innerHeight - margin - cardBounds.height)}px`;
     }
     field.focus();
     if (field instanceof HTMLTextAreaElement) {
@@ -571,10 +574,32 @@ export default class CmContextPadProvider implements ContextPadProvider {
   private openMenu(event: Event, element: CmElement, menuId: string, title: string): void {
     const anchor = ((event as { delegateTarget?: EventTarget }).delegateTarget ??
       event.target) as HTMLElement;
-    const bounds = anchor.getBoundingClientRect();
-    const position = { x: bounds.left, y: bounds.bottom + MENU_GAP };
-    this.currentMenu = { element, menuId, title, position };
+    this.openMenuBeside(anchor.getBoundingClientRect(), element, menuId, title);
+  }
+
+  /**
+   * Menus open beside the clicked entry — beneath it they would cover the
+   * rest of the vertical stack. At the viewport's right edge PopupMenu flips
+   * an overflowing menu back across its anchor (and the whole pad column), so
+   * a flipped menu is pushed fully left of the pad instead; the popup applies
+   * its initial position only once, so the correction sticks (and is saved
+   * for `reopenMenu`).
+   */
+  private openMenuBeside(
+    entryBounds: DOMRect,
+    element: CmElement,
+    menuId: string,
+    title: string,
+  ): void {
+    const position = { x: entryBounds.right + MENU_GAP, y: entryBounds.top };
     this.popupMenu.open(element, menuId, position, { title });
+    const popup = document.querySelector<HTMLElement>(".djs-popup");
+    const popupBounds = popup?.getBoundingClientRect();
+    if (popup && popupBounds && popupBounds.left < entryBounds.right) {
+      position.x = Math.max(MENU_GAP, entryBounds.left - MENU_GAP - popupBounds.width);
+      popup.style.left = `${position.x}px`;
+    }
+    this.currentMenu = { element, menuId, title, position };
   }
 
   /**

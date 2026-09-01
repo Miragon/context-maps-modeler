@@ -167,24 +167,19 @@
 }
 
 /* --- Context pad (per-element quick actions) ------------------------------ */
-/* Styled on .djs-context-pad itself (like the palette) so it travels if the
-   host re-parents it: a floating pill matching the palette chrome. */
-.djs-context-pad {
-  width: auto;
-  padding: 5px 6px;
-  background: var(--cd-weiss, #fff);
-  border: 1px solid var(--cm-line, #e6e2e2);
-  border-radius: var(--cd-radius-md, 12px);
-  box-shadow: var(--cd-shadow-2, 0 4px 12px rgba(29, 29, 29, 0.1));
-  pointer-events: all;
-}
+/* A vertical stack where every action is its own small card. The container
+   stays chromeless AND click-through (stock pointer-events: none; only the
+   cards opt back in) — the gaps between cards must not swallow canvas
+   clicks. */
 .djs-context-pad.open {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
 }
 /* diagram-js anchors a connection's pad at the LAST waypoint — on the target
    context's edge. When the closing segment points into that box (rightward /
-   downward), flip the pill to the free side so it never covers the target. */
+   downward), flip the stack to the free side so it never covers the target. */
 .djs-context-pad.cm-pad-flip-x {
   transform: translate(calc(-100% - 16px), 14px);
 }
@@ -193,44 +188,36 @@
 }
 .djs-context-pad .group {
   display: flex;
-  align-items: center;
-  gap: 2px;
-}
-.djs-context-pad .group + .group {
-  position: relative;
-  margin-left: 9px;
-  padding-left: 9px;
-}
-.djs-context-pad .group + .group::before {
-  content: "";
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 0;
-  width: 1px;
-  background: var(--cm-line, #e6e2e2);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
 }
 .djs-context-pad .entry.cm-pad-entry {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 30px;
   margin: 0;
-  border-radius: var(--cd-radius-sm, 6px);
-  background: none;
+  background: var(--cd-weiss, #fff);
+  border: 1px solid var(--cm-line, #e6e2e2);
+  border-radius: var(--cd-radius-md, 12px);
+  box-shadow: var(--cd-shadow-1, 0 1px 3px rgba(29, 29, 29, 0.1));
   color: var(--cd-schwarz, #1d1d1d);
   cursor: pointer;
   transition:
     background 120ms ease,
-    color 120ms ease;
+    color 120ms ease,
+    border-color 120ms ease;
 }
 .djs-context-pad .entry.cm-pad-entry:hover {
   background: var(--cm-accent-soft, rgba(51, 93, 229, 0.12));
+  border-color: var(--cm-accent, #335de5);
   color: var(--cm-accent, #335de5);
 }
 .djs-context-pad .entry.cm-pad-entry--danger:hover {
   background: var(--cd-danger-soft, rgba(201, 42, 42, 0.12));
+  border-color: var(--cd-danger, #c92a2a);
   color: var(--cd-danger, #c92a2a);
 }
 .djs-context-pad .cm-palette-svg {
