@@ -30,3 +30,7 @@ export const FONT = {
 
 /** Paper colour used for the label halo so text stays legible over lines. */
 export const PAPER = MIRAGON.weiss;
+
+/** Box colours for contexts without a subdomain classification (canvas + icons). */
+export const NEUTRAL_FILL = "#F1F1EE";
+export const NEUTRAL_STROKE = "#8A8577";

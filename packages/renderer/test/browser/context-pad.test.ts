@@ -1,0 +1,575 @@
+import { expect, test } from "vitest";
+import {
+  Modeler,
+  NavigatedViewer,
+  isCmContext,
+  isCmRelationship,
+} from "@miragon/context-maps-renderer";
+import type { CmContext, CmRelationship } from "@miragon/context-maps-renderer";
+import { emptyDocument, type CmDocument } from "@miragon/context-maps-schema-model";
+
+function mount(): { modeler: Modeler; container: HTMLDivElement } {
+  const container = document.createElement("div");
+  container.style.width = "900px";
+  container.style.height = "640px";
+  document.body.appendChild(container);
+  return { modeler: new Modeler({ container }), container };
+}
+
+function twoContexts(): CmDocument {
+  const doc = emptyDocument("m");
+  doc.contexts = [
+    { id: "a", label: "A", position: { x: 100, y: 200 }, size: { width: 200, height: 110 } },
+    { id: "b", label: "B", position: { x: 600, y: 200 }, size: { width: 200, height: 110 } },
+  ];
+  return doc;
+}
+
+function connectedContexts(pattern: CmRelationship["pattern"]): CmDocument {
+  const doc = twoContexts();
+  doc.relationships = [{ id: "r", from: "a", to: "b", pattern }];
+  return doc;
+}
+
+function padActions(container: HTMLElement): string[] {
+  return [...container.querySelectorAll(".djs-context-pad.open .entry")].map(
+    (entry) => entry.getAttribute("data-action") ?? "",
+  );
+}
+
+function clickPadEntry(container: HTMLElement, action: string): void {
+  const entry = container.querySelector(`.djs-context-pad.open [data-action="${action}"]`);
+  expect(entry, `pad entry "${action}"`).not.toBeNull();
+  entry!.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
+}
+
+function clickMenuEntry(id: string): void {
+  const entry = document.querySelector(`.djs-popup [data-id="${id}"]`);
+  expect(entry, `popup entry "${id}"`).not.toBeNull();
+  entry!.dispatchEvent(new MouseEvent("click", { bubbles: true, button: 0 }));
+}
+
+test("selecting a bounded context shows the quick-action pad", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(twoContexts());
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [a] = registry.getAll().filter(isCmContext);
+
+    expect(container.querySelector(".djs-context-pad.open")).toBeNull();
+
+    selection.select(a);
+    const pad = container.querySelector(".djs-context-pad.open");
+    expect(pad).not.toBeNull();
+    expect(padActions(container)).toEqual([
+      "append-context",
+      "connect",
+      "subdomain-type",
+      "team",
+      "edit-label",
+      "delete",
+    ]);
+
+    selection.select(null);
+    expect(container.querySelector(".djs-context-pad.open")).toBeNull();
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("the subdomain-type menu classifies the context through the command stack", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(twoContexts());
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [a] = registry.getAll().filter(isCmContext) as CmContext[];
+
+    selection.select(a);
+    clickPadEntry(container, "subdomain-type");
+
+    const popup = document.querySelector(".djs-popup");
+    expect(popup).not.toBeNull();
+    expect(popup!.querySelector(".djs-popup-title")?.textContent).toBe("Subdomain type");
+    // three types + "Unclassified", which reflects the current (unset) state
+    expect(popup!.querySelectorAll("[data-id]")).toHaveLength(4);
+    expect(
+      popup!
+        .querySelector('[data-id="type-none"] .djs-popup-entry-name')
+        ?.classList.contains("cm-popup-active"),
+    ).toBe(true);
+
+    clickMenuEntry("type-generic");
+    expect(document.querySelector(".djs-popup")).toBeNull();
+    expect(a.subdomainType).toBe("generic");
+    expect(modeler.exportDocument().contexts.find((c) => c.id === "a")?.subdomainType).toBe(
+      "generic",
+    );
+
+    // the pad's type icon action stays, and the menu now marks the new state
+    clickPadEntry(container, "subdomain-type");
+    expect(
+      document
+        .querySelector('.djs-popup [data-id="type-generic"] .djs-popup-entry-name')
+        ?.classList.contains("cm-popup-active"),
+    ).toBe(true);
+    modeler.get<{ close(): void }>("popupMenu").close();
+
+    modeler.undo();
+    expect(a.subdomainType).toBeUndefined();
+    modeler.redo();
+    expect(a.subdomainType).toBe("generic");
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("selecting a relationship offers pattern, roles, swap, rename and delete", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(connectedContexts("upstream-downstream"));
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [relationship] = registry.getAll().filter(isCmRelationship);
+
+    selection.select(relationship);
+    const pad = container.querySelector(".djs-context-pad.open");
+    expect(pad).not.toBeNull();
+    expect(padActions(container)).toEqual([
+      "pattern",
+      "roles",
+      "swap-ends",
+      "edit-label",
+      "delete",
+    ]);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("the pattern menu switches the pattern and prunes direction-only actions", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(connectedContexts("upstream-downstream"));
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [relationship] = registry.getAll().filter(isCmRelationship) as CmRelationship[];
+    relationship.upstreamRoles = ["OHS"];
+
+    selection.select(relationship);
+    clickPadEntry(container, "pattern");
+
+    const popup = document.querySelector(".djs-popup");
+    expect(popup).not.toBeNull();
+    expect(popup!.querySelector(".djs-popup-title")?.textContent).toBe("Relationship pattern");
+    expect(popup!.querySelectorAll("[data-id]")).toHaveLength(5);
+    expect(
+      popup!
+        .querySelector('[data-id="pattern-upstream-downstream"] .djs-popup-entry-name')
+        ?.classList.contains("cm-popup-active"),
+    ).toBe(true);
+
+    clickMenuEntry("pattern-partnership");
+    expect(relationship.pattern).toBe("partnership");
+    // symmetric patterns carry no roles and no direction actions
+    expect(relationship.upstreamRoles).toBeUndefined();
+    expect(padActions(container)).toEqual(["pattern", "edit-label", "delete"]);
+    expect(modeler.exportDocument().relationships[0].pattern).toBe("partnership");
+
+    modeler.undo();
+    expect(relationship.pattern).toBe("upstream-downstream");
+    expect(relationship.upstreamRoles).toEqual(["OHS"]);
+    expect(padActions(container)).toEqual([
+      "pattern",
+      "roles",
+      "swap-ends",
+      "edit-label",
+      "delete",
+    ]);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("the roles menu toggles upstream roles and keeps downstream roles exclusive", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(connectedContexts("upstream-downstream"));
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [relationship] = registry.getAll().filter(isCmRelationship) as CmRelationship[];
+
+    selection.select(relationship);
+    clickPadEntry(container, "roles");
+    const popup = document.querySelector(".djs-popup");
+    expect(popup!.querySelector(".djs-popup-title")?.textContent).toBe("Integration roles");
+    expect(popup!.querySelectorAll("[data-id]")).toHaveLength(4);
+
+    clickMenuEntry("upstream-OHS");
+    expect(relationship.upstreamRoles).toEqual(["OHS"]);
+
+    // the multi-select menu survives the toggle (re-opened in place) and now
+    // marks the fresh state, so roles can be combined without re-opening the pad
+    expect(
+      document
+        .querySelector('.djs-popup [data-id="upstream-OHS"] .djs-popup-entry-name')
+        ?.classList.contains("cm-popup-active"),
+    ).toBe(true);
+    clickMenuEntry("upstream-PL");
+    expect(relationship.upstreamRoles).toEqual(["OHS", "PL"]);
+
+    clickMenuEntry("downstream-ACL");
+    expect(relationship.downstreamRoles).toEqual(["ACL"]);
+
+    // picking the other downstream role replaces (ACL and CF exclude each other)
+    clickMenuEntry("downstream-CF");
+    expect(relationship.downstreamRoles).toEqual(["CF"]);
+
+    // toggling an active role off again
+    clickMenuEntry("downstream-CF");
+    expect(relationship.downstreamRoles).toBeUndefined();
+
+    modeler.undo();
+    expect(relationship.downstreamRoles).toEqual(["CF"]);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("customer-supplier blocks OHS and CF in the roles menu", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(connectedContexts("customer-supplier"));
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [relationship] = registry.getAll().filter(isCmRelationship) as CmRelationship[];
+
+    selection.select(relationship);
+    clickPadEntry(container, "roles");
+
+    const ohs = document.querySelector('.djs-popup [data-id="upstream-OHS"]');
+    const cf = document.querySelector('.djs-popup [data-id="downstream-CF"]');
+    expect(ohs?.classList.contains("disabled")).toBe(true);
+    expect(cf?.classList.contains("disabled")).toBe(true);
+
+    clickMenuEntry("upstream-OHS");
+    expect(relationship.upstreamRoles).toBeUndefined();
+
+    clickMenuEntry("upstream-PL");
+    expect(relationship.upstreamRoles).toEqual(["PL"]);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("an imported rule-violating role stays deselectable under customer-supplier", () => {
+  const { modeler, container } = mount();
+  try {
+    const doc = connectedContexts("customer-supplier");
+    doc.relationships[0].upstreamRoles = ["OHS"];
+    doc.relationships[0].downstreamRoles = ["CF"];
+    modeler.importDocument(doc);
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [relationship] = registry.getAll().filter(isCmRelationship) as CmRelationship[];
+
+    selection.select(relationship);
+    clickPadEntry(container, "roles");
+
+    // deselecting the violating role is the repair — it must not be locked out
+    const ohs = document.querySelector('.djs-popup [data-id="upstream-OHS"]');
+    expect(ohs?.classList.contains("disabled")).toBe(false);
+    expect(ohs?.querySelector(".djs-popup-entry-name")?.classList.contains("cm-popup-active")).toBe(
+      true,
+    );
+    clickMenuEntry("upstream-OHS");
+    expect(relationship.upstreamRoles).toBeUndefined();
+
+    clickMenuEntry("downstream-CF");
+    expect(relationship.downstreamRoles).toBeUndefined();
+
+    // once removed, the customer-supplier blockers apply again
+    const ohsAfter = document.querySelector('.djs-popup [data-id="upstream-OHS"]');
+    expect(ohsAfter?.classList.contains("disabled")).toBe(true);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("a relationship with an unknown pattern still gets a working pad", () => {
+  const { modeler, container } = mount();
+  try {
+    const doc = twoContexts();
+    doc.relationships = [
+      { id: "r", from: "a", to: "b", pattern: "conformist" as CmRelationship["pattern"] },
+    ];
+    modeler.importDocument(doc);
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [relationship] = registry.getAll().filter(isCmRelationship) as CmRelationship[];
+
+    selection.select(relationship);
+    // no direction-only actions for an unknown pattern, but the pattern menu
+    // stays available to repair the element
+    expect(padActions(container)).toEqual(["pattern", "edit-label", "delete"]);
+
+    clickPadEntry(container, "pattern");
+    clickMenuEntry("pattern-upstream-downstream");
+    expect(relationship.pattern).toBe("upstream-downstream");
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("the pad is clamped back into view at the canvas edge", async () => {
+  const { modeler, container } = mount();
+  try {
+    const doc = emptyDocument("m");
+    doc.contexts = [
+      { id: "a", label: "A", position: { x: 0, y: 0 }, size: { width: 200, height: 110 } },
+    ];
+    modeler.importDocument(doc);
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const canvas = modeler.get<{ viewbox(box?: object): { scale: number } }>("canvas");
+    const [a] = registry.getAll().filter(isCmContext);
+
+    // place the shape at the right canvas edge — the pad would overflow and be
+    // clipped by the container's overflow: hidden
+    canvas.viewbox({ x: -650, y: -150, width: 900, height: 640 });
+    selection.select(a);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const pad = container.querySelector<HTMLElement>(".djs-context-pad.open");
+    expect(pad).not.toBeNull();
+    const padBounds = pad!.getBoundingClientRect();
+    const containerBounds = container.getBoundingClientRect();
+    expect(padBounds.right).toBeLessThanOrEqual(containerBounds.right);
+    expect(padBounds.width).toBeGreaterThan(0);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("a connection closing rightward flips its pad clear of the target context", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(connectedContexts("upstream-downstream"));
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [relationship] = registry.getAll().filter(isCmRelationship);
+
+    selection.select(relationship);
+    const pad = container.querySelector(".djs-context-pad.open");
+    expect(pad!.classList.contains("cm-pad-flip-x")).toBe(true);
+    expect(pad!.classList.contains("cm-pad-flip-y")).toBe(false);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("the delete action removes the element through the command stack", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(connectedContexts("partnership"));
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [relationship] = registry.getAll().filter(isCmRelationship);
+
+    selection.select(relationship);
+    clickPadEntry(container, "delete");
+    expect(modeler.exportDocument().relationships).toHaveLength(0);
+
+    modeler.undo();
+    expect(modeler.exportDocument().relationships).toHaveLength(1);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("the connect action draws a relationship from the pad", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(twoContexts());
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const canvas = modeler.get<{ getGraphics(el: unknown): SVGElement }>("canvas");
+    const eventBus = modeler.get<{ createEvent(data: unknown): Event }>("eventBus");
+    const dragging = modeler.get<{
+      hover(event: Event): void;
+      move(event: Event): void;
+      end(): void;
+    }>("dragging");
+    const [a, b] = registry.getAll().filter(isCmContext);
+
+    selection.select(a);
+    clickPadEntry(container, "connect");
+    dragging.move(
+      eventBus.createEvent({ x: 500, y: 255, clientX: 500, clientY: 255 }) as unknown as Event,
+    );
+    dragging.hover(
+      eventBus.createEvent({ element: b, gfx: canvas.getGraphics(b) }) as unknown as Event,
+    );
+    dragging.move(
+      eventBus.createEvent({ x: 700, y: 255, clientX: 700, clientY: 255 }) as unknown as Event,
+    );
+    dragging.end();
+
+    const exported = modeler.exportDocument();
+    expect(exported.relationships).toHaveLength(1);
+    expect(exported.relationships[0]).toMatchObject({ from: "a", to: "b" });
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("the append action creates a connected blank context and offers its type", async () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(twoContexts());
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void; get(): unknown[] }>("selection");
+    const [a] = registry.getAll().filter(isCmContext) as CmContext[];
+
+    selection.select(a);
+    clickPadEntry(container, "append-context");
+
+    const exported = modeler.exportDocument();
+    expect(exported.contexts).toHaveLength(3);
+    expect(exported.relationships).toHaveLength(1);
+    const appended = exported.contexts.find((c) => c.id !== "a" && c.id !== "b")!;
+    // blank by default — classifying happens via the menu that opens next
+    expect(appended.subdomainType).toBeUndefined();
+    expect(exported.relationships[0]).toMatchObject({ from: "a", to: appended.id });
+
+    // the new context is selected and the subdomain-type menu opens on it
+    const selected = selection.get().filter(isCmContext) as CmContext[];
+    expect(selected).toHaveLength(1);
+    expect(selected[0].id).toBe(appended.id);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const popup = document.querySelector(".djs-popup");
+    expect(popup).not.toBeNull();
+    expect(popup!.querySelector(".djs-popup-title")?.textContent).toBe("Subdomain type");
+
+    clickMenuEntry("type-core");
+    expect(modeler.exportDocument().contexts.find((c) => c.id === appended.id)?.subdomainType).toBe(
+      "core",
+    );
+
+    // one undo for the classification, one for the whole append (shape + line)
+    modeler.undo();
+    modeler.undo();
+    expect(modeler.exportDocument().contexts).toHaveLength(2);
+    expect(modeler.exportDocument().relationships).toHaveLength(0);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("a multi-selection gets a single delete action", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(twoContexts());
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const contexts = registry.getAll().filter(isCmContext);
+
+    selection.select(contexts);
+    expect(padActions(container)).toEqual(["delete"]);
+
+    clickPadEntry(container, "delete");
+    expect(modeler.exportDocument().contexts).toHaveLength(0);
+
+    modeler.undo();
+    expect(modeler.exportDocument().contexts).toHaveLength(2);
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("the team action edits the owning team inline", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(twoContexts());
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [a] = registry.getAll().filter(isCmContext) as CmContext[];
+
+    selection.select(a);
+    clickPadEntry(container, "team");
+
+    const input = container.querySelector<HTMLInputElement>(
+      '.cm-label-input[data-property="team"]',
+    );
+    expect(input).not.toBeNull();
+    expect(input!.placeholder).toBe("Owning team");
+    input!.value = "Team Payments";
+    input!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(a.team).toBe("Team Payments");
+    expect(modeler.exportDocument().contexts.find((c) => c.id === "a")?.team).toBe("Team Payments");
+
+    modeler.undo();
+    expect(a.team).toBeUndefined();
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("the rename action opens the inline label editor", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(twoContexts());
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const [a] = registry.getAll().filter(isCmContext) as CmContext[];
+
+    selection.select(a);
+    clickPadEntry(container, "edit-label");
+
+    const input = container.querySelector<HTMLInputElement>(".cm-label-input");
+    expect(input).not.toBeNull();
+    input!.value = "Billing";
+    input!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(a.cmLabel).toBe("Billing");
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("viewers stay pad-free", () => {
+  const container = document.createElement("div");
+  container.style.width = "900px";
+  container.style.height = "640px";
+  document.body.appendChild(container);
+  const viewer = new NavigatedViewer({ container });
+  try {
+    viewer.importDocument(twoContexts());
+    const registry = viewer.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = viewer.get<{ select(el: unknown): void }>("selection");
+    const [a] = registry.getAll().filter(isCmContext);
+
+    selection.select(a);
+    expect(container.querySelector(".djs-context-pad")).toBeNull();
+    expect(() => viewer.get("contextPad")).toThrow();
+  } finally {
+    viewer.destroy();
+    container.remove();
+  }
+});

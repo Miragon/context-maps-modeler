@@ -1,14 +1,22 @@
 /**
- * Inline label editing as an HTML overlay (an <input> centred over the element).
- * Commit goes through `cmModeling.updateLabel` → command stack (undoable).
- * Double-click any element (context or relationship) to (re)label it.
+ * Inline editing as an HTML overlay (an <input> centred over the element).
+ * Commits go through `cmModeling` → command stack (undoable). Double-click any
+ * element (context or relationship) to (re)label it; the context pad also
+ * routes its rename and owning-team actions through here.
  */
 
 import type Canvas from "diagram-js/lib/core/Canvas";
 import type EventBus from "diagram-js/lib/core/EventBus";
 import type { Point } from "diagram-js/lib/util/Types";
-import { isCmElement, isCmRelationship, type CmElement } from "../model/di-types.js";
+import {
+  isCmElement,
+  isCmRelationship,
+  type CmContext,
+  type CmElement,
+} from "../model/di-types.js";
 import type CmModeling from "../modeling/CmModeling.js";
+
+export type EditableProperty = "cmLabel" | "team";
 
 interface ActiveEdit {
   commit: () => void;
@@ -34,7 +42,7 @@ export default class CmLabelEditing {
     );
   }
 
-  activate(element: CmElement): void {
+  activate(element: CmElement, property: EditableProperty = "cmLabel"): void {
     this.active?.commit();
 
     const container = this.canvas.getContainer();
@@ -48,7 +56,11 @@ export default class CmLabelEditing {
     const input = document.createElement("input");
     input.type = "text";
     input.className = "cm-label-input";
-    input.value = element.cmLabel ?? "";
+    input.dataset.property = property;
+    if (property === "team") input.placeholder = "Owning team";
+    const currentValue = (): string =>
+      (property === "team" ? (element as CmContext).team : element.cmLabel) ?? "";
+    input.value = currentValue();
     input.style.position = "absolute";
     input.style.left = `${left}px`;
     input.style.top = `${top}px`;
@@ -69,9 +81,14 @@ export default class CmLabelEditing {
     const commit = () => {
       if (done) return;
       const value = input.value.trim();
-      const changed = value !== (element.cmLabel ?? "");
+      const changed = value !== currentValue();
       cleanup();
-      if (changed) this.modeling.updateLabel(element, value);
+      if (!changed) return;
+      if (property === "team") {
+        this.modeling.setTeam(element as CmContext, value || undefined);
+      } else {
+        this.modeling.updateLabel(element, value);
+      }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter") {

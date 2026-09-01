@@ -66,13 +66,17 @@ export default class CmElementFactory {
   // No explicit id: the element factory (CmDiagramElementFactory) assigns a
   // collision-free model-style id (`ctx_…`).
 
-  createNewContext(subdomainType: SubdomainType, label?: string): CmContext {
-    const spec = SUBDOMAIN_TYPE_SPECS[subdomainType];
+  /** No type → an unclassified context (the pad's append action starts blank). */
+  createNewContext(subdomainType?: SubdomainType, label?: string): CmContext {
+    // Every type shares one default size; generic serves as the neutral fallback.
+    const size =
+      (subdomainType ? SUBDOMAIN_TYPE_SPECS[subdomainType] : undefined)?.defaultSize ??
+      SUBDOMAIN_TYPE_SPECS.generic.defaultSize;
     return this.elementFactory.createShape({
-      width: spec.defaultSize.width,
-      height: spec.defaultSize.height,
+      width: size.width,
+      height: size.height,
       cmKind: "context",
-      subdomainType,
+      ...(subdomainType ? { subdomainType } : {}),
       cmLabel: label ?? "New Context",
     } as Partial<CmContext>) as unknown as CmContext;
   }

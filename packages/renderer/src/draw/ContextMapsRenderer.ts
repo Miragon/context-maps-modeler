@@ -27,7 +27,15 @@ import {
   SUBDOMAIN_TYPE_SPECS,
 } from "@miragon/context-maps-schema-model";
 import type { SubdomainType } from "@miragon/context-maps-schema-model";
-import { FONT, INK, INK_SOFT, PAPER, TT_RENDER_PRIORITY } from "./styles.js";
+import {
+  FONT,
+  INK,
+  INK_SOFT,
+  NEUTRAL_FILL,
+  NEUTRAL_STROKE,
+  PAPER,
+  TT_RENDER_PRIORITY,
+} from "./styles.js";
 import { endRoleChipLayout } from "./endRoleChips.js";
 import {
   isCmContext,
@@ -38,9 +46,6 @@ import {
 } from "../model/di-types.js";
 
 type Attrs = Record<string, string | number>;
-
-const NEUTRAL_FILL = "#F1F1EE";
-const NEUTRAL_STROKE = "#8A8577";
 
 export default class ContextMapsRenderer extends BaseRenderer {
   static $inject = ["eventBus"];
