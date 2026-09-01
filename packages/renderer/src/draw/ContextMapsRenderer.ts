@@ -148,9 +148,12 @@ export default class ContextMapsRenderer extends BaseRenderer {
       const startX = w / 2 - totalWidth / 2;
       const cy = h - 12;
 
-      svgAppend(visuals, peopleIcon(startX + iconSize / 2, cy, iconSize, INK_SOFT));
+      const icon = peopleIcon(startX + iconSize / 2, cy, iconSize, INK_SOFT);
+      svgAttr(icon, { class: "cm-team" });
+      svgAppend(visuals, icon);
 
       const team = svgAttr(svgCreate("text"), {
+        class: "cm-team",
         x: startX + iconSize + gap,
         y: cy,
         "font-family": FONT.family,
@@ -453,7 +456,18 @@ function peopleIcon(cx: number, cy: number, size: number, color: string): SVGEle
 }
 
 /** Greedy word-wrap into lines that roughly fit `maxWidth` at the font size. */
+/** Explicit line breaks are the author's — wrap only within each of them. */
 function wrapLabel(text: string, maxWidth: number, fontSize: number): string[] {
+  const paragraphs = text.split("\n");
+  if (paragraphs.every((paragraph) => paragraph.trim() === "")) return [];
+  return paragraphs.flatMap((paragraph) => {
+    const lines = wrapParagraph(paragraph, maxWidth, fontSize);
+    // An intentionally blank line keeps its vertical space.
+    return lines.length ? lines : [""];
+  });
+}
+
+function wrapParagraph(text: string, maxWidth: number, fontSize: number): string[] {
   const maxChars = Math.max(4, Math.floor(maxWidth / (fontSize * 0.58)));
   const words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) return [];

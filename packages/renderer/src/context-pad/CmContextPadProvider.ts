@@ -4,8 +4,8 @@
  * hosts that build their own inspector.
  *
  *  - Bounded context: append a connected context, connect, subdomain type
- *    (menu), owning team and description (anchored prompts), rename (in-place
- *    direct editing), delete.
+ *    (menu), owning team (in-place over its caption), rename (in-place direct
+ *    editing), description (anchored prompt), delete.
  *  - Relationship: pattern (menu); integration roles (menu) and swap ends
  *    while the pattern is asymmetric; rename, description, delete.
  *  - Multi-selection: delete.
@@ -283,15 +283,7 @@ export default class CmContextPadProvider implements ContextPadProvider {
           iconMarkup(ICON_TEAM),
           `Set owning team — currently ${context.team ?? "none"}`,
         ),
-        action: {
-          click: (event: Event) =>
-            this.openPrompt(event, {
-              value: context.team ?? "",
-              placeholder: "Owning team",
-              label: "Owning team",
-              onCommit: (value) => this.cmModeling.setTeam(context, value || undefined),
-            }),
-        },
+        action: { click: () => this.labelEditing.activateTeam(context) },
       },
       "edit-label": this.editLabelEntry(context, "Rename context"),
       description: this.descriptionEntry(context, "Purpose, ubiquitous language, notes…"),

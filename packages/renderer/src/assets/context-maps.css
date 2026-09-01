@@ -481,6 +481,9 @@
 .cm-direct-editing .djs-visual text.cm-name {
   display: none;
 }
+.cm-direct-editing-team .djs-visual .cm-team {
+  display: none;
+}
 .cm-djs-container .djs-direct-editing-parent {
   z-index: 150;
   color: var(--cm-ink, #1d1d1d);

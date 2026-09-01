@@ -505,39 +505,64 @@ test("a multi-selection gets a single delete action", () => {
   }
 });
 
-test("the team action opens an anchored prompt at the pad, not over the element", () => {
+test("the team action edits the caption in place at the box bottom", () => {
   const { modeler, container } = mount();
   try {
     modeler.importDocument(twoContexts());
     const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
     const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const canvas = modeler.get<{
+      getGraphics(el: unknown): SVGElement;
+      getAbsoluteBBox(el: unknown): { y: number; height: number };
+    }>("canvas");
     const [a] = registry.getAll().filter(isCmContext) as CmContext[];
 
     selection.select(a);
-    const entry = container.querySelector<HTMLElement>(
-      '.djs-context-pad.open [data-action="team"]',
-    )!;
     clickPadEntry(container, "team");
 
-    const prompt = container.querySelector<HTMLElement>(".cm-pad-prompt");
-    expect(prompt).not.toBeNull();
-    const input = prompt!.querySelector<HTMLInputElement>("input.cm-pad-prompt__field");
-    expect(input).not.toBeNull();
-    expect(input!.placeholder).toBe("Owning team");
-    // anchored below the pad entry, not centred over the element
-    const entryBounds = entry.getBoundingClientRect();
-    const promptBounds = prompt!.getBoundingClientRect();
-    expect(Math.abs(promptBounds.left - entryBounds.left)).toBeLessThan(2);
-    expect(promptBounds.top).toBeGreaterThan(entryBounds.bottom);
+    // the edit box sits over the caption band at the BOTTOM of the box
+    const parent = container.querySelector<HTMLElement>(".djs-direct-editing-parent");
+    expect(parent).not.toBeNull();
+    const bbox = canvas.getAbsoluteBBox(a);
+    const boxTop = parseFloat(parent!.style.top);
+    expect(boxTop).toBeGreaterThan(bbox.y + bbox.height / 2);
+    expect(canvas.getGraphics(a).classList.contains("cm-direct-editing-team")).toBe(true);
 
-    input!.value = "Team Payments";
-    input!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-    expect(container.querySelector(".cm-pad-prompt")).toBeNull();
+    const content = container.querySelector<HTMLElement>(".djs-direct-editing-content")!;
+    content.innerText = "Team Payments";
+    modeler.get<{ complete(): void }>("directEditing").complete();
     expect(a.team).toBe("Team Payments");
     expect(modeler.exportDocument().contexts.find((c) => c.id === "a")?.team).toBe("Team Payments");
+    expect(canvas.getGraphics(a).classList.contains("cm-direct-editing-team")).toBe(false);
 
     modeler.undo();
     expect(a.team).toBeUndefined();
+  } finally {
+    modeler.destroy();
+    container.remove();
+  }
+});
+
+test("explicit line breaks from direct editing survive into the rendered name", () => {
+  const { modeler, container } = mount();
+  try {
+    modeler.importDocument(twoContexts());
+    const registry = modeler.get<{ getAll(): unknown[] }>("elementRegistry");
+    const selection = modeler.get<{ select(el: unknown): void }>("selection");
+    const canvas = modeler.get<{ getGraphics(el: unknown): SVGElement }>("canvas");
+    const [a] = registry.getAll().filter(isCmContext) as CmContext[];
+
+    selection.select(a);
+    clickPadEntry(container, "edit-label");
+    const content = container.querySelector<HTMLElement>(".djs-direct-editing-content")!;
+    content.innerText = "Billing\nand Dunning";
+    modeler.get<{ complete(): void }>("directEditing").complete();
+
+    expect(a.cmLabel).toBe("Billing\nand Dunning");
+    const lines = [...canvas.getGraphics(a).querySelectorAll("text.cm-name")].map(
+      (node) => node.textContent,
+    );
+    expect(lines).toEqual(["Billing", "and Dunning"]);
   } finally {
     modeler.destroy();
     container.remove();

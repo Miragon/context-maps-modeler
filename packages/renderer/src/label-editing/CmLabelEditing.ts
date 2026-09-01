@@ -1,26 +1,36 @@
 /**
- * In-place name editing via diagram-js-direct-editing (the bpmn.io mechanism):
+ * In-place editing via diagram-js-direct-editing (the bpmn.io mechanism):
  * double-click a context or relationship — or use the context pad's rename
  * action — and the name becomes editable directly inside the element, at the
- * spot and size it is rendered. Enter/blur commits through
- * `cmModeling.updateLabel` (undoable), Escape cancels; panning/zooming or
- * starting a drag completes the edit. The rendered name is hidden while
- * editing (element marker) so the text never doubles up.
+ * spot and size it is rendered (Shift+Enter inserts a line break the renderer
+ * preserves). The owning-team caption edits the same way: the pad's team
+ * action (or a double-click on the caption) opens the box right over it.
+ * Enter/blur commits through `cmModeling` (undoable), Escape cancels;
+ * panning/zooming or starting a drag completes the edit. The edited text is
+ * hidden behind an element marker while the box is open so nothing doubles up.
  */
 
 import type Canvas from "diagram-js/lib/core/Canvas";
 import type EventBus from "diagram-js/lib/core/EventBus";
 import type { Element, ShapeLike } from "diagram-js/lib/model/Types";
 import { FONT } from "../draw/styles.js";
-import { isCmContext, isCmElement, type CmElement } from "../model/di-types.js";
+import { isCmContext, isCmElement, type CmContext, type CmElement } from "../model/di-types.js";
 import type CmModeling from "../modeling/CmModeling.js";
 
-/** Hides the rendered `.cm-name` texts of the element while it is edited. */
-const EDITING_MARKER = "cm-direct-editing";
+type EditMode = "name" | "team";
+
+/** Hide the rendered text being edited: `.cm-name` resp. `.cm-team` (CSS). */
+const MARKERS: Record<EditMode, string> = {
+  name: "cm-direct-editing",
+  team: "cm-direct-editing-team",
+};
 
 /** Mirrors the renderer: label wrap inset (10px each side), team caption row. */
 const LABEL_INSET_X = 10;
 const TEAM_RESERVE = 18;
+/** The team caption band at the bottom of the box (renderer: centre at h-12). */
+const TEAM_BAND_HEIGHT = 20;
+const TEAM_BAND_BOTTOM_GAP = 2;
 
 // The service surface of the (untyped, plain-JS) diagram-js-direct-editing
 // package — typed locally so nothing untyped leaks into the published d.ts.
@@ -45,6 +55,10 @@ interface DirectEditingService {
 export default class CmLabelEditing {
   static $inject = ["eventBus", "canvas", "directEditing", "cmModeling"];
 
+  /** Which property the CURRENT activation edits (set right before activate). */
+  private mode: EditMode = "name";
+  private activeMarker?: { element: Element; marker: string };
+
   constructor(
     eventBus: EventBus,
     private readonly canvas: Canvas,
@@ -59,9 +73,19 @@ export default class CmLabelEditing {
       update: (element, newText) => this.commit(element, newText),
     });
 
-    eventBus.on("element.dblclick", (event: { element?: unknown }) => {
-      if (isCmElement(event.element)) directEditing.activate(event.element as Element);
-    });
+    eventBus.on(
+      "element.dblclick",
+      (event: { element?: unknown; originalEvent?: { clientY?: number } }) => {
+        const element = event.element;
+        if (!isCmElement(element)) return;
+        // A double-click on the team caption band edits the team, not the name.
+        this.mode =
+          isCmContext(element) && element.team && this.isInTeamBand(element, event.originalEvent)
+            ? "team"
+            : "name";
+        directEditing.activate(element as Element);
+      },
+    );
 
     // The edit box is viewport-anchored — complete before the canvas moves
     // away underneath it (complete() is a no-op while inactive).
@@ -69,30 +93,72 @@ export default class CmLabelEditing {
 
     eventBus.on("directEditing.activate", (event: { active?: { element?: Element } }) => {
       const element = event.active?.element;
-      if (element) canvas.addMarker(element as unknown as ShapeLike, EDITING_MARKER);
+      if (!element) return;
+      const marker = MARKERS[this.mode];
+      canvas.addMarker(element as unknown as ShapeLike, marker);
+      this.activeMarker = { element, marker };
     });
-    eventBus.on(
-      ["directEditing.complete", "directEditing.cancel"],
-      (event: { active?: { element?: Element } }) => {
-        const element = event.active?.element;
-        if (element) canvas.removeMarker(element as unknown as ShapeLike, EDITING_MARKER);
-      },
-    );
+    eventBus.on(["directEditing.complete", "directEditing.cancel"], () => {
+      const active = this.activeMarker;
+      if (active) canvas.removeMarker(active.element as unknown as ShapeLike, active.marker);
+      this.activeMarker = undefined;
+    });
   }
 
   /** Start in-place editing of the element's name (context pad, hosts). */
   activate(element: CmElement): void {
+    this.mode = "name";
     this.directEditing.activate(element as Element);
+  }
+
+  /** Start in-place editing of the owning-team caption at the box bottom. */
+  activateTeam(context: CmContext): void {
+    this.mode = "team";
+    this.directEditing.activate(context as unknown as Element);
   }
 
   cancel(): void {
     this.directEditing.cancel();
   }
 
+  private isInTeamBand(context: CmContext, originalEvent?: { clientY?: number }): boolean {
+    if (typeof originalEvent?.clientY !== "number") return false;
+    const zoom = this.canvas.zoom();
+    const bbox = this.canvas.getAbsoluteBBox(context as unknown as ShapeLike);
+    const containerTop = this.canvas.getContainer().getBoundingClientRect().top;
+    const y = originalEvent.clientY - containerTop;
+    return y >= bbox.y + bbox.height - (TEAM_BAND_HEIGHT + TEAM_BAND_BOTTOM_GAP) * zoom;
+  }
+
   private activationContext(element: Element): DirectEditingContext | undefined {
     if (!isCmElement(element)) return undefined;
+    if (this.mode === "team" && !isCmContext(element)) this.mode = "name";
     const zoom = this.canvas.zoom();
     const bbox = this.canvas.getAbsoluteBBox(element as unknown as ShapeLike);
+
+    if (this.mode === "team") {
+      const context = element as CmContext;
+      // Right over the caption at the box bottom, in the caption's type size.
+      return {
+        bounds: {
+          x: bbox.x + LABEL_INSET_X * zoom,
+          y: bbox.y + bbox.height - (TEAM_BAND_HEIGHT + TEAM_BAND_BOTTOM_GAP) * zoom,
+          width: bbox.width - 2 * LABEL_INSET_X * zoom,
+          height: TEAM_BAND_HEIGHT * zoom,
+        },
+        text: context.team ?? "",
+        style: {
+          fontFamily: FONT.family,
+          fontSize: `${FONT.small * zoom}px`,
+          fontWeight: 400,
+          lineHeight: 1.2,
+          backgroundColor: "transparent",
+          border: "1px dashed rgba(51, 93, 229, 0.65)",
+          textAlign: "center",
+        },
+        options: { centerVertically: true },
+      };
+    }
 
     const style: Record<string, string | number> = {
       fontFamily: FONT.family,
@@ -143,7 +209,13 @@ export default class CmLabelEditing {
   private commit(element: Element, newText: string): void {
     const value = newText.trim();
     // DirectEditing also calls update() on pure bounds jitter — don't push a
-    // no-op command (an empty undo step) when the name did not change.
+    // no-op command (an empty undo step) when nothing changed.
+    if (this.mode === "team") {
+      const context = element as unknown as CmContext;
+      if (value === (context.team ?? "")) return;
+      this.modeling.setTeam(context, value || undefined);
+      return;
+    }
     if (value === ((element as CmElement).cmLabel ?? "")) return;
     this.modeling.updateLabel(element as CmElement, value);
   }
