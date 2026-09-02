@@ -477,6 +477,8 @@
 }
 .cm-djs-container .djs-direct-editing-content {
   caret-color: var(--cm-accent, #335de5);
+  /* Words longer than the line hard-break — exactly like the renderer wraps. */
+  overflow-wrap: break-word;
 }
 
 /* --- Anchored free-text prompt (owning team / description via the pad) ---- */

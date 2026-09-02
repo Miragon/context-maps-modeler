@@ -16,7 +16,7 @@ diagram. **No backend** — everything is local, and a diagram is shared by enco
   top-centre, an element-bound **context pad** floating next to the selection and the notation
   **Legend** bottom-left (all from the renderer), a **☰ Menu** top-left and a **Share** button
   top-right.
-- **Edit by direct manipulation.** Drag from the palette to create, move, resize contexts, connect
+- **Edit by direct manipulation.** Drag from the palette to create and move contexts, connect
   them with relationships, inline-edit labels, undo/redo — all from the diagram-js core.
 - **Share via URL, no server.** **Share** copies a self-contained link — the whole diagram is
   LZ-compressed into the URL hash (`#d=…`). Opening that link restores the diagram.

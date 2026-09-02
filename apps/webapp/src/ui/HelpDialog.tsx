@@ -10,7 +10,6 @@ const SHORTCUTS: Array<[string, string]> = [
   ["⌘/Ctrl + Z", "Undo"],
   ["⇧⌘/Ctrl + Z, ⌘/Ctrl + Y", "Redo"],
   ["Delete / Backspace", "Remove selection"],
-  ["Drag corner of context", "Resize"],
 ];
 
 const FOCUSABLE =

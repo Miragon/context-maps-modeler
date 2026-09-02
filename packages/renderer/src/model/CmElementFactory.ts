@@ -22,12 +22,17 @@ export default class CmElementFactory {
   // --- from canonical document elements (import) -------------------------
 
   createContext(ctx: BoundedContext): CmContext {
+    // Boxes are fixed-size on the canvas (no resize feature) — clamp legacy or
+    // hand-edited imports up to the notation minimum so the fixed name/team
+    // layout always fits inside the box.
+    const spec = ctx.subdomainType ? SUBDOMAIN_TYPE_SPECS[ctx.subdomainType] : undefined;
+    const minSize = spec?.minSize ?? { width: 120, height: 72 };
     return this.elementFactory.createShape({
       id: ctx.id,
       x: ctx.position.x,
       y: ctx.position.y,
-      width: ctx.size.width,
-      height: ctx.size.height,
+      width: Math.max(ctx.size.width, minSize.width),
+      height: Math.max(ctx.size.height, minSize.height),
       cmKind: "context",
       cmLabel: ctx.label,
       ...(ctx.subdomainType ? { subdomainType: ctx.subdomainType } : {}),

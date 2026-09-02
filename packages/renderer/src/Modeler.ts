@@ -5,7 +5,6 @@ import ConnectionPreviewModule from "diagram-js/lib/features/connection-preview"
 import ModelingModule from "diagram-js/lib/features/modeling";
 import MoveModule from "diagram-js/lib/features/move";
 import OutlineModule from "diagram-js/lib/features/outline";
-import ResizeModule from "diagram-js/lib/features/resize";
 
 import { NavigatedViewer } from "./NavigatedViewer.js";
 import { cmModelingModule } from "./modeling/index.js";
@@ -20,8 +19,9 @@ import { cmValidationModule } from "./validation/index.js";
 import { cmZOrderModule } from "./zorder/index.js";
 
 /**
- * Full Context Maps editor: palette/create, move, resize, connect with
- * rules, context pad, inline label editing, undo/redo.
+ * Full Context Maps editor: palette/create, move, connect with rules,
+ * context pad, inline label editing, undo/redo. Boxes are fixed-size —
+ * no resize feature.
  */
 export class Modeler extends NavigatedViewer {
   protected override _getModules(): ModuleDeclaration[] {
@@ -32,7 +32,6 @@ export class Modeler extends NavigatedViewer {
       ModelingModule,
       MoveModule,
       OutlineModule,
-      ResizeModule,
       // Context Maps editor
       cmModelingModule,
       cmRulesModule,

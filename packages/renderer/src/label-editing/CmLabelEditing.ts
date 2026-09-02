@@ -13,7 +13,7 @@
 import type Canvas from "diagram-js/lib/core/Canvas";
 import type EventBus from "diagram-js/lib/core/EventBus";
 import type { Element, ShapeLike } from "diagram-js/lib/model/Types";
-import { FONT } from "../draw/styles.js";
+import { CONTEXT_NAME_TOP, CONTEXT_TEAM_RESERVE, FONT } from "../draw/styles.js";
 import { isCmContext, isCmElement, type CmContext, type CmElement } from "../model/di-types.js";
 import type CmModeling from "../modeling/CmModeling.js";
 
@@ -25,9 +25,8 @@ const MARKERS: Record<EditMode, string> = {
   team: "cm-direct-editing-team",
 };
 
-/** Mirrors the renderer: label wrap inset (10px each side), team caption row. */
+/** Mirrors the renderer: label wrap inset (10px each side). */
 const LABEL_INSET_X = 10;
-const TEAM_RESERVE = 18;
 /** The team caption band at the bottom of the box (renderer: centre at h-12). */
 const TEAM_BAND_HEIGHT = 20;
 const TEAM_BAND_BOTTOM_GAP = 2;
@@ -173,19 +172,20 @@ export default class CmLabelEditing {
     };
 
     if (isCmContext(element)) {
-      // The renderer centres the name over the full height, minus the team
-      // caption row — mirror that band so the text does not jump.
-      const reserve = element.team ? TEAM_RESERVE * zoom : 0;
+      // The renderer anchors the name at the fixed top offset below the type
+      // header — mirror that band exactly so the text does not jump. The 1px
+      // dashed border (box-sizing: border-box) pushes the text down — offset
+      // the box up by it.
+      const reserve = element.team ? CONTEXT_TEAM_RESERVE * zoom : 0;
       return {
         bounds: {
           x: bbox.x + LABEL_INSET_X * zoom,
-          y: bbox.y,
+          y: bbox.y + CONTEXT_NAME_TOP * zoom - 1,
           width: bbox.width - 2 * LABEL_INSET_X * zoom,
-          height: bbox.height - reserve,
+          height: bbox.height - CONTEXT_NAME_TOP * zoom - reserve,
         },
         text: element.cmLabel ?? "",
         style,
-        options: { centerVertically: true },
       };
     }
 

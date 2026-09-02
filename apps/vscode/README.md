@@ -49,8 +49,8 @@ A diagram shows bounded contexts and the relationships between them.
 - **Full modeler:** the floating tool palette (top-centre) places the three subdomain types of
   bounded context; selecting an element opens its **context pad** — append a connected context (⊞),
   arm the connect tool (→) and click the target (live preview line), change subdomain type /
-  relationship pattern / integration roles via popup menus, swap ends, rename, delete. Move, resize,
-  and inline label editing all work, with undo/redo via `Ctrl/Cmd+Z` and `Ctrl/Cmd+Shift+Z`.
+  relationship pattern / integration roles via popup menus, swap ends, rename, delete. Move and
+  inline label editing work, with undo/redo via `Ctrl/Cmd+Z` and `Ctrl/Cmd+Shift+Z`.
 - **Collapsed menu** (top-right, Excalidraw-style): fit-to-view · export SVG/PNG.
 - **Editable embedded-PNG diagrams (`*.cm.png`).** Exported PNGs store the diagram
   inside a `tEXt` chunk, so the file stays a normal image you can drop into a wiki, README, or chat —

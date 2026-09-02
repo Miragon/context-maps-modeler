@@ -8,7 +8,7 @@ and full editor for strategic Domain-Driven Design [Context Maps](https://contex
 diagrams, built on [diagram-js](https://github.com/bpmn-io/diagram-js) (MIT).
 
 It renders the canonical document from
-[`@miragon/context-maps-schema-model`](../schema-model) and gives you palette, move, resize,
+[`@miragon/context-maps-schema-model`](../schema-model) and gives you palette, move,
 connect-by-relationship, context pad, a collapsible notation legend, inline label editing and
 undo/redo — with no UI framework required. Mount it into any `<div>`; the web app (React) and the VS Code extension both wrap this
 exact package.
@@ -21,11 +21,11 @@ npm install @miragon/context-maps-renderer @miragon/context-maps-schema-model
 
 ## Three entry points
 
-| Class             | Use it for                                                                     |
-| ----------------- | ------------------------------------------------------------------------------ |
-| `Viewer`          | Read-only rendering, no interaction (thumbnails, static embeds).               |
-| `NavigatedViewer` | Read-only + zoom (scroll), pan (drag) and selection.                           |
-| `Modeler`         | The full editor: palette, move, resize, context pad, label editing, undo/redo. |
+| Class             | Use it for                                                             |
+| ----------------- | ---------------------------------------------------------------------- |
+| `Viewer`          | Read-only rendering, no interaction (thumbnails, static embeds).       |
+| `NavigatedViewer` | Read-only + zoom (scroll), pan (drag) and selection.                   |
+| `Modeler`         | The full editor: palette, move, context pad, label editing, undo/redo. |
 
 All three share a common base (`CmBaseViewer`) with the same import/export and lifecycle API.
 
@@ -106,7 +106,7 @@ viewer via `additionalModules`:
 | `cmDrawModule`           | Custom SVG rendering of contexts and relationships (`ContextMapsRenderer`).                                                                                                      |
 | `ioModule`               | Document ↔ canvas bridge (`CmImporter`, `CmExporter`, `saveSVG`).                                                                                                                |
 | `cmModelingModule`       | High-level mutations — label, subdomain type, relationship pattern, roles, colours.                                                                                              |
-| `cmRulesModule`          | Editing rules (what can move / resize / be created / connected).                                                                                                                 |
+| `cmRulesModule`          | Editing rules (what can move / be created / connected; no resize).                                                                                                               |
 | `cmBehaviorsModule`      | Keeps the model **flat** — shapes never nest.                                                                                                                                    |
 | `cmPaletteModule`        | The floating tool palette (top-centre): lasso tool + drag-to-create contexts.                                                                                                    |
 | `cmConnectHandlesModule` | Opt-in (not in the default `Modeler`): four outward connect arrows around the selected context.                                                                                  |
