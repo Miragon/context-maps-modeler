@@ -281,6 +281,25 @@ test.describe("VS Code webview: protocol and chrome", () => {
     );
   });
 
+  test("an open Map title… dialog closes when the text stops being a valid map", async ({
+    page,
+  }) => {
+    await openWebview(page);
+    await page.locator('[data-chrome="menu"]').click();
+    await page.getByRole("menuitem", { name: "Map title…" }).click();
+    const dialog = page.getByRole("dialog", { name: "Map title" });
+    await dialog.getByRole("textbox", { name: "Title" }).fill("Typed before the text broke");
+
+    await postFromHost(page, { type: "update", text: INVALID_MAP });
+
+    await expect(dialog).toBeHidden();
+    await page.waitForTimeout(200);
+    expect((await postedMessages(page)).map((message) => message.type)).not.toContain("edit");
+    expect(await page.evaluate(() => window.modeler!.diagram.getMeta()?.title)).not.toBe(
+      "Typed before the text broke",
+    );
+  });
+
   test("palette entries carry their name, no native title", async ({ page }) => {
     await openWebview(page);
     const entries = await page

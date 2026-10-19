@@ -10,6 +10,7 @@ import {
   isCmContext,
   isCmElement,
   renderLegend,
+  READ_ONLY_CHANGED_EVENT,
   type CmReadOnly,
   type CollaborativeContextMapsModeler,
 } from "@miragon/context-maps-renderer";
@@ -110,6 +111,10 @@ const shortcutsDialog = createShortcutsDialog(shell);
 const titleDialog = createTitleDialog(shell, {
   title: () => modeler.getMeta()?.title ?? "",
   setTitle: (title) => modeler.setMeta({ title }),
+});
+// The lock disables "Map title…" in the menu; an open dialog would apply a title the file never gets.
+modeler.on<{ readOnly?: boolean }>(READ_ONLY_CHANGED_EVENT, (event) => {
+  if (event.readOnly) titleDialog.close();
 });
 modeler.on("diagram.destroy", () => {
   shortcutsDialog.destroy();
