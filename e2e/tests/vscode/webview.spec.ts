@@ -56,7 +56,7 @@ test.describe("VS Code webview: protocol and chrome", () => {
     expect(types).not.toContain("edit");
   });
 
-  test("the menu holds Legend, Export (PNG, SVG, JSON, CML) and Keyboard shortcuts…", async ({
+  test("the menu holds Map title…, Legend, Export (PNG, SVG, JSON, CML) and Keyboard shortcuts…", async ({
     page,
   }) => {
     await openWebview(page);
@@ -71,6 +71,7 @@ test.describe("VS Code webview: protocol and chrome", () => {
         ),
       );
     expect(labels).toEqual([
+      "model:Map title…",
       "model:Legend",
       "export:Export as PNG",
       "export:Export as SVG",
@@ -243,6 +244,41 @@ test.describe("VS Code webview: protocol and chrome", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(page.locator('[data-chrome="menu"]')).toBeFocused();
+  });
+
+  test("Map title… renames the map in one edit and returns the focus to the menu", async ({
+    page,
+  }) => {
+    await openWebview(page);
+    await page.locator('[data-chrome="menu"]').click();
+    await page.getByRole("menuitem", { name: "Map title…" }).click();
+    const dialog = page.getByRole("dialog", { name: "Map title" });
+    await expect(dialog).toBeVisible();
+    const field = dialog.getByRole("textbox", { name: "Title" });
+    await expect(field).toBeFocused();
+    await field.fill("Renamed conference");
+    await page.keyboard.press("Enter");
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('[data-chrome="menu"]')).toBeFocused();
+    const edit = await waitForPosted(page, "edit");
+    expect((JSON.parse(edit.text as string) as { title: string }).title).toBe("Renamed conference");
+    const edits = (await postedMessages(page)).filter((message) => message.type === "edit");
+    expect(edits).toHaveLength(1);
+  });
+
+  test("Map title… is locked while the text is no valid map", async ({ page }) => {
+    await openWebview(page);
+    await postFromHost(page, { type: "update", text: INVALID_MAP });
+    await expect(page.locator('[data-chrome="status"]')).toBeVisible();
+    await page.locator('[data-chrome="menu"]').click();
+    await expect(page.locator('[data-menu-id="map-title"]')).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await expect(page.locator('[data-menu-id="legend"]')).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
   });
 
   test("palette entries carry their name, no native title", async ({ page }) => {

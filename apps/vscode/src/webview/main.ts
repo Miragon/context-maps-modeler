@@ -6,6 +6,7 @@ import {
   contextMapMenu,
   createCollaborativeModeler,
   createShortcutsDialog,
+  createTitleDialog,
   isCmContext,
   isCmElement,
   renderLegend,
@@ -92,6 +93,7 @@ const shell = mountVsCodeShell(app, {
       cml: { onSelect: () => void exportAs("cml") },
     },
     showKeyboardShortcuts: () => shortcutsDialog.open(),
+    editTitle: () => titleDialog.open(),
   }),
   // The rows come after the mount, which hands out the chrome tooltip they explain themselves in.
   legend: {
@@ -104,7 +106,15 @@ const shell = mountVsCodeShell(app, {
 });
 if (shell.legend) renderLegend(shell.legend.body, { tooltip: shell.tooltip });
 const shortcutsDialog = createShortcutsDialog(shell);
-modeler.on("diagram.destroy", () => shortcutsDialog.destroy());
+// A title change is a canvas edit like any other: one command, posted to the document as one edit.
+const titleDialog = createTitleDialog(shell, {
+  title: () => modeler.getMeta()?.title ?? "",
+  setTitle: (title) => modeler.setMeta({ title }),
+});
+modeler.on("diagram.destroy", () => {
+  shortcutsDialog.destroy();
+  titleDialog.destroy();
+});
 
 /** The tight bounds of the contexts (relationship lines run between them); no padding of its own. */
 function contentBounds(): Box | undefined {
