@@ -2,8 +2,6 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import prettier from "eslint-config-prettier";
-import reactHooks from "eslint-plugin-react-hooks";
-import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 
 /**
@@ -62,7 +60,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["**/*.{ts,tsx}"],
+    files: ["**/*.ts"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
@@ -77,7 +75,7 @@ export default tseslint.config(
   },
   // DOM-dependent packages/apps + E2E specs (page.evaluate runs in the browser): browser globals.
   {
-    files: ["packages/renderer/**/*.ts", "apps/webapp/**/*.{ts,tsx}", "e2e/**/*.ts"],
+    files: ["packages/renderer/**/*.ts", "apps/webapp/**/*.ts", "e2e/**/*.ts"],
     languageOptions: {
       globals: { ...globals.browser },
     },
@@ -94,19 +92,6 @@ export default tseslint.config(
     files: ["apps/vscode/**/*.ts"],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser },
-    },
-  },
-  // React app: hooks + fast-refresh hygiene.
-  {
-    files: ["apps/webapp/**/*.{ts,tsx}"],
-    plugins: {
-      "react-hooks": reactHooks,
-      "react-refresh": reactRefresh,
-    },
-    rules: {
-      "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "warn",
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
     },
   },
   // DOM-FREE packages: hard boundary.
@@ -133,7 +118,7 @@ export default tseslint.config(
   },
   // Tests may be more lenient.
   {
-    files: ["**/*.{test,spec}.{ts,tsx}"],
+    files: ["**/*.{test,spec}.ts"],
     languageOptions: {
       globals: { ...globals.node },
     },

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildShareUrl, decodeDocumentFromHash, encodeDocumentToHash } from "./url";
+import {
+  buildShareUrl,
+  decodeDocumentFromHash,
+  encodeDocumentToHash,
+  hashHoldsDocument,
+} from "../src/io/url";
 import { serializeDocument } from "@miragon/context-maps-schema-model";
 import { SAMPLE_DOCUMENT } from "@miragon/context-maps-schema-model";
 
@@ -20,5 +25,12 @@ describe("url sharing", () => {
     expect(decodeDocumentFromHash("")).toBeNull();
     expect(decodeDocumentFromHash("#d=not-valid-lz")).toBeNull();
     expect(decodeDocumentFromHash("#other=1")).toBeNull();
+  });
+
+  it("tells a link that carries a map, readable or not, from one that carries none", () => {
+    expect(hashHoldsDocument(`#d=${encodeDocumentToHash(SAMPLE_DOCUMENT)}`)).toBe(true);
+    expect(hashHoldsDocument("#d=!!!cut-off")).toBe(true);
+    expect(hashHoldsDocument("")).toBe(false);
+    expect(hashHoldsDocument("#other=1")).toBe(false);
   });
 });
