@@ -612,8 +612,11 @@ kbd {
   animation: tt-toast-in 0.18s ease;
 }
 
+/* Design system 1.13.0 turned the success status into the bright brand green, which white text
+   cannot be read on; dark text keeps the toast legible. */
 .tt-toast--success {
-  background: var(--cd-success, #0b7a55);
+  background: var(--cd-success, #00e676);
+  color: var(--cd-schwarz, #1d1d1d);
 }
 .tt-toast--error {
   background: var(--danger);
