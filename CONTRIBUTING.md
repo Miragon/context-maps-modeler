@@ -50,14 +50,17 @@ three projects:
 
 | Project          | What                                                                  | Server, port                              |
 | ---------------- | --------------------------------------------------------------------- | ----------------------------------------- |
-| `chromium`       | the web app                                                           | `apps/webapp` dev server, `E2E_PORT` 5180 |
-| `webkit`         | the web app in Safari's engine                                        | the same                                  |
+| `chromium`       | the web app, with the shell's kit on the web host                     | `apps/webapp` dev server, `E2E_PORT` 5180 |
+| `webkit`         | the web app in Safari's engine (without the kit, see below)           | the same                                  |
 | `vscode-webview` | the VS Code webview in the shell's VS Code stub, with the shell's kit | `e2e/webview/`, `E2E_WEBVIEW_PORT` 5190   |
 
 Run one project with `npm run test:e2e -- --project=vscode-webview`; set both ports when another
 checkout already uses the defaults (`E2E_PORT=6201 E2E_WEBVIEW_PORT=6211 npm run test:e2e`). The
 `vscode-webview` project also builds the production webview bundle and loads it behind the real
-webview CSP. Locally, run `npx playwright install chromium webkit` once; CI installs the browsers
+webview CSP. The shell's kit skips WebKit: its tab-order checks need a browser whose Tab reaches
+buttons and links, which WebKit does not do by default. After `npm run build:webapp`,
+`npm run check:build -w apps/webapp` checks that the production `index.html` carries the mode markup
+and the bundle keeps the shell's Lucide licence comment (CI runs both). Locally, run `npx playwright install chromium webkit` once; CI installs the browsers
 from the lockfile-pinned Playwright.
 
 ## Design tokens
@@ -95,7 +98,7 @@ docs: add contributing guide
 | `@miragon/context-maps-schema-model` | Types, notation spec, Zod validation, serialization             | DOM-free |
 | `@miragon/context-maps-cml`          | Context Mapper CML parser and serializer                        | DOM-free |
 | `@miragon/context-maps-renderer`     | diagram-js bootstrap, renderer, viewer, import/export, contract | DOM      |
-| `apps/webapp`                        | Vite + React demo editor                                        | DOM      |
+| `apps/webapp`                        | Vite demo editor on the modeler shell                           | DOM      |
 | `apps/vscode`                        | VS Code custom editors for `.cm`/`.cm.json` and `*.cm.png`      | DOM      |
 
 **P1 — the DOM boundary:** the DOM-free packages (`schema-model`, `cml`) must **never** import

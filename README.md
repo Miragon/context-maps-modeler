@@ -56,9 +56,11 @@ checked by `validateDocument()`.
 
 ## Targets
 
-- **Web app** ([`apps/webapp`](apps/webapp/README.md)) — a Vite + React editor with a full-bleed
-  canvas, palette, context pad, legend, PNG/SVG export and a shareable, self-contained URL
-  (LZ-compressed, no backend). Deployed on Netlify.
+- **Web app** ([`apps/webapp`](apps/webapp/README.md)) — a Vite editor in the same Miragon modeler
+  chrome ([`@miragon/modeler-shell`](https://www.npmjs.com/package/@miragon/modeler-shell), web
+  host): a full-bleed canvas with palette, context pad, legend, zoom panel and problems list, a
+  start screen, a page-wide drop zone for `.cm`, `.json` and `.cml` files, PNG/SVG/JSON/CML
+  export and a shareable, self-contained URL (LZ-compressed, no backend). Deployed on Netlify.
 - **VS Code extension** ([`apps/vscode`](apps/vscode/README.md)) — a custom editor for `.cm` and
   `.cm.json` files inside the shared Miragon modeler chrome
   ([`@miragon/modeler-shell`](https://www.npmjs.com/package/@miragon/modeler-shell)): the JSON file
@@ -107,7 +109,7 @@ packages/
                                             context-pad, label editing, import/export, CSS, the
                                             collaborative-modeler contract.
 apps/
-  webapp/        @miragon/context-maps-webapp       — Vite + React editor application.
+  webapp/        @miragon/context-maps-webapp       — Vite editor application on the modeler shell.
   vscode/        context-maps-modeler  — VS Code custom editors for .cm/.cm.json and *.cm.png.
 e2e/                                       — Playwright end-to-end tests: the webapp and the VS Code webview.
 ```

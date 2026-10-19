@@ -42,16 +42,21 @@ applies to everything else (chrome, typography, selection, neutrals, the app ico
   every hook filled; a skip or an advisory fails it. Imports are silent (the history goes without an
   event), reject without a trace (ids, coordinates, newer versions checked first) and keep unknown
   keys.
-- **Chrome.** The VS Code webview mounts [`@miragon/modeler-shell`](https://www.npmjs.com/package/@miragon/modeler-shell)
-  (menu, palette skin, zoom panel and keys, fit, legend slot, problems pill, status box, empty-file
-  hint) with `themes: ["light"]`. The renderer **never imports the shell** (ESLint and
+- **Chrome.** Both apps mount [`@miragon/modeler-shell`](https://www.npmjs.com/package/@miragon/modeler-shell)
+  with `themes: ["light"]`: the VS Code webview on the `ide` host (menu, palette skin, zoom panel and
+  keys, fit, legend slot, problems pill, status box, empty-file hint), the web app on the `web` host
+  (the same plus File group, Share, legal line, toasts, problems list, start screen and drop zone;
+  `index.html` gets the mode markup of `webHeadMarkup` from the Vite config). Neither app has a
+  stylesheet or chrome markup of its own. The renderer **never imports the shell** (ESLint and
   dependency-cruiser enforce it); it hands the chrome structurally typed parts: `contextMapMenu`,
-  `createShortcutsDialog`, `renderLegend`, the `cmReadOnly` canvas lock, keyboard creation
-  (`freeRectInsets`) and `undoRedoKeys: false` for hosts that own the history. The DOM-free packages
-  take only types from `@miragon/modeler-api`. The web app does not run on the shell yet; it adds the
-  legend card (`cmLegendModule`) itself.
+  `createShortcutsDialog`, `createTitleDialog`, `renderLegend`, the `cmReadOnly` canvas lock,
+  keyboard creation (`freeRectInsets`) and `undoRedoKeys: false` for hosts that own the history.
+  `cmLegendModule` and the renderer's own palette rules stay for hosts that embed the renderer
+  without the shell. The DOM-free packages take only types from `@miragon/modeler-api`.
 - **Kit.** `e2e/` runs the shell's conformance kit against the real webview in the shell's VS Code
-  stub (project `vscode-webview`, served from `e2e/webview/`); only the inspector is declared absent.
+  stub (project `vscode-webview`, served from `e2e/webview/`; only the inspector is absent) and
+  against the web app (project `chromium`; the inspector and the invalid-file state are absent). Any
+  skip fails the suite.
 
 ## Monorepo (npm workspaces)
 
@@ -73,7 +78,7 @@ pins the same `esbuild` as the vscode app for its smoke test of the shipped webv
 | `@miragon/context-maps-schema-model` | Types, the notation spec, Zod validation, migrations, JSON serialization     | no  |
 | `@miragon/context-maps-cml`          | Context Mapper CML ↔ document (parse and serialize)                          | no  |
 | `@miragon/context-maps-renderer`     | diagram-js viewer/modeler, the collaborative-modeler contract, import/export | yes |
-| `apps/webapp`                        | Vite + React demo editor                                                     | yes |
+| `apps/webapp`                        | Vite demo editor on the modeler shell (web host)                             | yes |
 | `apps/vscode`                        | VS Code extension: custom editors for `.cm`/`.cm.json` and `*.cm.png`        | yes |
 
 **P1 — DOM boundary:** the DOM-free packages (`schema-model`, `cml`) must **never** import
@@ -83,7 +88,8 @@ violating import fails `npm run lint` and `npm run depcruise`.
 
 ## Commands
 
-- `npm run build` — packages (schema-model, then renderer) · `npm run build:webapp` ·
+- `npm run build` — packages (schema-model, then renderer) · `npm run build:webapp` (then
+  `npm run check:build -w apps/webapp`: mode markup and licence comment in the bundle) ·
   `npm run build:vscode`
 - `npm run dev:webapp` (alias: `npm run dev`) serves the webapp via [Portless](https://portless.sh)
   at a stable per-worktree `http://<worktree>.context-maps-modeler.localhost:8080` URL (Portless-derived

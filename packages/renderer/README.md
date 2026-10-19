@@ -10,7 +10,7 @@ diagrams, built on [diagram-js](https://github.com/bpmn-io/diagram-js) (MIT).
 It renders the canonical document from
 [`@miragon/context-maps-schema-model`](../schema-model) and gives you palette, move,
 connect-by-relationship, context pad, inline label editing and undo/redo — with no UI framework
-required. Mount it into any `<div>`; the web app (React) and the VS Code extension both wrap this
+required. Mount it into any `<div>`; the web app and the VS Code extension both wrap this
 exact package. It implements the collaborative-modeler contract of
 [`@miragon/modeler-api`](https://www.npmjs.com/package/@miragon/modeler-api), and it hands a chrome
 such as [`@miragon/modeler-shell`](https://www.npmjs.com/package/@miragon/modeler-shell) its legend,
