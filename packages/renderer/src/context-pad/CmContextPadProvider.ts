@@ -470,6 +470,11 @@ export default class CmContextPadProvider implements ContextPadProvider {
    */
   private activePrompt?: { cancel(): void };
 
+  /** Closes an open description prompt without saving it (an import replaces its element). */
+  cancelPrompt(): void {
+    this.activePrompt?.cancel();
+  }
+
   private openPrompt(
     event: Event,
     config: {
