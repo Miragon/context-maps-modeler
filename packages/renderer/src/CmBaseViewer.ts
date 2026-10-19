@@ -19,6 +19,7 @@ import type CmImporter from "./io/CmImporter.js";
 import type CmExporter from "./io/CmExporter.js";
 import type CmLabelEditing from "./label-editing/CmLabelEditing.js";
 import type CmModeling from "./modeling/CmModeling.js";
+import type CmReadOnly from "./read-only/CmReadOnly.js";
 import { ROOT_ID, type ImportWarning, type RootBusinessObject } from "./io/types.js";
 
 /** Container margins in screen px that a host's chrome covers. */
@@ -176,10 +177,13 @@ export abstract class CmBaseViewer {
 
   /**
    * Update diagram-level metadata on the root. In an editor a title change is an undoable command
-   * (`cmModeling.setTitle`); a viewer has no history and writes it directly.
+   * (`cmModeling.setTitle`); a viewer has no history and writes it directly. A locked editor
+   * (`cmReadOnly`) changes nothing: its host takes no edits, and the next import would silently
+   * revert the title.
    */
   setMeta(partial: Partial<RootBusinessObject>): void {
     if (partial.title === undefined) return;
+    if (this._optional<CmReadOnly>("cmReadOnly")?.isReadOnly()) return;
     const root = this._documentRoot();
     if (!root?.businessObject || root.businessObject.title === partial.title) return;
     const modeling = this._optional<CmModeling>("cmModeling");

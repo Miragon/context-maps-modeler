@@ -179,6 +179,10 @@ test("the read-only lock leaves no context pad, move, delete or label editor", (
     expect(modeler.get<CmLabelEditing>("cmLabelEditing").openEdit()).toBeUndefined();
     expect(press(canvasSvg(modeler), { key: "a", metaKey: true }).defaultPrevented).toBe(true);
 
+    const title = modeler.exportDocument().title;
+    modeler.setMeta({ title: "Renamed on a locked canvas" });
+    expect(modeler.exportDocument().title).toBe(title);
+
     lock.setReadOnly(false);
     selection.select(context);
     expect(modeler.container.querySelectorAll(".djs-context-pad .entry").length).toBeGreaterThan(0);
