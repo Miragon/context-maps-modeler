@@ -82,6 +82,13 @@ export default tseslint.config(
       globals: { ...globals.browser },
     },
   },
+  // Build and release scripts run in Node.
+  {
+    files: ["**/scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
   // The VS Code extension has a Node host AND a browser webview — allow both global sets.
   {
     files: ["apps/vscode/**/*.ts"],
