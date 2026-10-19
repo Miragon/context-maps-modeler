@@ -152,11 +152,20 @@ export default class CmContextPadProvider implements ContextPadProvider {
     void connect;
     contextPad.registerProvider(this);
     // A read-only canvas has no context pad (guide §13.5): nothing it offers may change the map.
+    eventBus.on("contextPad.open.allowed", 2000, () =>
+      this.readOnly.isReadOnly() ? false : undefined,
+    );
     eventBus.on(READ_ONLY_CHANGED_EVENT, (event: { readOnly?: boolean }) => {
-      if (!event.readOnly) return;
-      this.cancelPrompt();
-      popupMenu.close();
-      contextPad.close();
+      if (event.readOnly) {
+        this.cancelPrompt();
+        popupMenu.close();
+        contextPad.close();
+        return;
+      }
+      // Unlocked with an element still selected: its pad comes back, as a fresh selection would.
+      const selected = selection.get() as Element[];
+      if (selected.length === 1) contextPad.open(selected[0]!, true);
+      else if (selected.length > 1) contextPad.open(selected, true);
     });
     popupMenu.registerProvider(SUBDOMAIN_MENU, {
       getPopupMenuEntries: (target: PopupMenuTarget) => this.subdomainMenuEntries(target),
