@@ -12,8 +12,10 @@ const WEBVIEW_URL = `http://localhost:${WEBVIEW_PORT}`;
  *  - `chromium` and `webkit`: @miragon/context-maps-webapp. Its dev server resolves
  *    @miragon/context-maps-* via Vite source aliases (apps/webapp/vite.config.ts), so no package
  *    build is required. Canvas interactions (drag-connect etc.) behave differently enough across
- *    engines that both are worth covering. `cwd: '..'` runs the command from the repo root so the
- *    npm workspace resolves.
+ *    engines that both are worth covering. The shell's conformance kit runs in Chromium only: its
+ *    tab-order checks need a browser whose Tab reaches buttons and links, which WebKit does not by
+ *    default (Safari's "Press Tab to highlight each item"). `cwd: '..'` runs the command from the
+ *    repo root so the npm workspace resolves.
  *  - `vscode-webview`: the VS Code webview (apps/vscode/src/webview/main.ts) inside the shell's
  *    VS Code stub, served by its own Vite test page (webview/), also from the package sources.
  *    VS Code's webviews are Chromium.
@@ -37,7 +39,7 @@ export default defineConfig({
     },
     {
       name: "webkit",
-      testIgnore: "**/vscode/**",
+      testIgnore: ["**/vscode/**", "**/*shell-conformance.spec.ts"],
       use: { ...devices["Desktop Safari"], baseURL: WEBAPP_URL },
     },
     {
