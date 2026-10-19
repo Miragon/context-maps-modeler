@@ -425,19 +425,25 @@
   pointer-events: none;
 }
 
-/* The integration-role chip of a legend row; its colour comes inline from the notation. */
-.cm-legend__mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  min-width: 24px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 4px;
-  font-size: 10.5px;
-  font-weight: 700;
-  line-height: 1;
+/* --- Notation legend content (rendered into the modeler shell's legend card) --- */
+/* Rows, previews and separators are the shell's (cd-shell-legend-*); a group keeps its rows at
+   the body's 4px rhythm. */
+.cm-legend-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cm-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* --- In-place direct editing (name inside the element, bpmn.io style) ----- */
@@ -559,6 +565,179 @@
   margin-top: 4px;
   padding-top: 4px;
   border-top: 1px solid var(--cd-ui-linie);
+}
+
+/* --- Hover tooltip (an element's own data) -------------------------------- */
+/* Styled like the chrome tooltip (guide §5.6). Transient, inside the canvas container: it may cover
+   the palette while the pointer rests on an element, never an island around the canvas. */
+.cm-hover-tooltip {
+  position: absolute;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  max-width: min(280px, 100% - 24px);
+  padding: 3px 8px;
+  background: var(--cd-ui-flaeche-hoch);
+  border: 1px solid var(--cd-ui-linie);
+  border-radius: var(--cd-radius-sm);
+  box-shadow: var(--cd-shadow-2);
+  color: var(--cd-ui-text);
+  font-size: 13px;
+  line-height: 20px;
+  pointer-events: none;
+}
+.cm-hover-tooltip[hidden] {
+  display: none;
+}
+.cm-hover-tooltip strong {
+  font-weight: 600;
+}
+.cm-hover-tooltip span {
+  color: var(--cd-ui-text-leise);
+}
+.cm-hover-tooltip span[hidden] {
+  display: none;
+}
+
+/* --- Keyboard shortcuts dialog (guide §5.4, §8) ---------------------------- */
+/* A modal <dialog> in the chrome's root: showModal() puts it in the top layer, above every island,
+   without a layer token. */
+.cm-shortcuts {
+  box-sizing: border-box;
+  width: min(560px, 100cqw - 32px);
+  max-width: none;
+  max-height: calc(100cqh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  color: var(--cd-ui-text);
+  background: var(--cd-ui-flaeche-hoch);
+  border: 1px solid var(--cd-ui-linie);
+  border-radius: var(--cd-radius-md);
+  box-shadow: var(--cd-shadow-3);
+}
+.cm-shortcuts[open] {
+  display: flex;
+}
+.cm-shortcuts::backdrop {
+  background: var(--cd-ui-backdrop);
+  backdrop-filter: blur(3px) grayscale(1);
+}
+.cm-shortcuts-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.cm-shortcuts-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 8px 24px;
+}
+.cm-shortcuts-title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.cm-shortcuts-close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--cd-ui-text);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: var(--cd-radius-sm);
+}
+.cm-shortcuts-close:hover {
+  color: var(--cd-ui-interaktion);
+  background: var(--cd-ui-hover);
+}
+.cm-shortcuts-close:focus-visible {
+  outline: 2px solid var(--cd-ui-fokus);
+  outline-offset: 2px;
+}
+.cm-shortcuts-close svg {
+  display: block;
+}
+.cm-shortcuts-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  padding: 8px 24px 24px;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.cm-shortcuts-group-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cd-ui-text-leise);
+}
+.cm-shortcuts-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.cm-shortcuts-table tr + tr {
+  border-top: 1px solid var(--cd-ui-linie);
+}
+.cm-shortcuts-action {
+  padding: 6px 12px 6px 0;
+  font-weight: 400;
+  text-align: left;
+}
+.cm-shortcuts-keys {
+  padding: 6px 0;
+  text-align: right;
+  white-space: nowrap;
+}
+/* The chips of the chrome tooltip (guide §5.6), whatever the host styles kbd with. */
+.cm-shortcuts-key {
+  display: inline-block;
+  padding: 1px 6px;
+  font-family:
+    "Geist Mono Variable", "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--cd-ui-text-leise);
+  background: var(--cd-ui-grund);
+  border: 1px solid var(--cd-ui-linie);
+  border-radius: var(--cd-radius-sm);
+  box-shadow: none;
+  vertical-align: baseline;
+}
+.cm-shortcuts-key + .cm-shortcuts-key {
+  margin-left: 6px;
+}
+/* High contrast (guide §6, §8): no shadow but a --cd-ui-kontur edge, and a 3px focus ring; forced
+   colours draw the edge in CanvasText and the ring in Highlight. The shell applies these rules
+   only to its own classes, so the modeler's dialog repeats them. */
+:root[data-cd-kontrast="hoch"] .cm-shortcuts {
+  border-color: var(--cd-ui-kontur);
+  box-shadow: none;
+}
+:root[data-cd-kontrast="hoch"] .cm-shortcuts-close:focus-visible {
+  outline-width: 3px;
+}
+@media (forced-colors: active) {
+  .cm-shortcuts {
+    border-color: CanvasText;
+  }
+  .cm-shortcuts-close:focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 /* --- Drag state ------------------------------------------------------------ */

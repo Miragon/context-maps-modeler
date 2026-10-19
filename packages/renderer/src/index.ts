@@ -26,12 +26,34 @@ export { cmPaletteModule, CmPaletteProvider } from "./palette/index.js";
 export type { CmPaletteConfig } from "./palette/index.js";
 export { cmConnectHandlesModule, CmConnectHandles } from "./connect-handles/index.js";
 export { cmContextPadModule, CmContextPadProvider } from "./context-pad/index.js";
-export { cmLegendModule, CmLegend } from "./legend/index.js";
+export { cmLegendModule, CmLegend, legendGroups, renderLegend } from "./legend/index.js";
+export type { LegendGroup, LegendRenderOptions, LegendRow, LegendTooltip } from "./legend/index.js";
+export { cmHoverTooltipModule, CmHoverTooltip, hoverTipFor } from "./hover-tooltip/index.js";
 export { cmLabelEditingModule, CmLabelEditing } from "./label-editing/index.js";
 export { cmKeyboardModule, CmKeyboard } from "./keyboard/index.js";
 export type { CmKeyboardConfig } from "./keyboard/index.js";
 export { cmReadOnlyModule, CmReadOnly, READ_ONLY_CHANGED_EVENT } from "./read-only/index.js";
 export { cmZOrderModule, CmZOrder } from "./zorder/index.js";
+
+// The map's part of a host's chrome: menu entries and the keyboard shortcuts dialog
+export { contextMapMenu, contextMapShortcuts, createShortcutsDialog } from "./chrome/index.js";
+export type {
+  MapExport,
+  MapExports,
+  MapMenu,
+  MapMenuAction,
+  MapMenuActions,
+  MapMenuDialog,
+  MapMenuEntry,
+  MapMenuIcon,
+  ShortcutGroup,
+  ShortcutKeyNames,
+  ShortcutPlatform,
+  ShortcutRow,
+  ShortcutsChrome,
+  ShortcutsDialog,
+  ShortcutsDialogChrome,
+} from "./chrome/index.js";
 
 // Runtime types & guards
 export { isCmElement, isCmContext, isCmRelationship } from "./model/di-types.js";

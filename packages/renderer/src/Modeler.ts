@@ -12,7 +12,6 @@ import { cmRulesModule } from "./rules/index.js";
 import { cmBehaviorsModule } from "./behaviors/index.js";
 import { cmPaletteModule } from "./palette/index.js";
 import { cmContextPadModule } from "./context-pad/index.js";
-import { cmLegendModule } from "./legend/index.js";
 import { cmLabelEditingModule } from "./label-editing/index.js";
 import { cmKeyboardModule } from "./keyboard/index.js";
 import { cmValidationModule } from "./validation/index.js";
@@ -41,7 +40,6 @@ export class Modeler extends NavigatedViewer {
       cmBehaviorsModule,
       cmPaletteModule,
       cmContextPadModule,
-      cmLegendModule,
       cmLabelEditingModule,
       cmKeyboardModule,
       cmValidationModule,
