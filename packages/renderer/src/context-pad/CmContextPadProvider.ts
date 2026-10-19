@@ -70,17 +70,7 @@ import type CmModeling from "../modeling/CmModeling.js";
 import type CmLabelEditing from "../label-editing/CmLabelEditing.js";
 import type CmElementFactory from "../model/CmElementFactory.js";
 import { contextIconSvg, relationshipIconSvg, roleChipSvg } from "../draw/palette-icons.js";
-import {
-  ICON_ADD_BOX,
-  ICON_ARROW_FORWARD,
-  ICON_DELETE,
-  ICON_EDIT,
-  ICON_NOTES,
-  ICON_SWAP,
-  ICON_TEAM,
-  ICON_TUNE,
-  iconMarkup,
-} from "../draw/icons.js";
+import { chromeIcon } from "../draw/lucide.js";
 
 const SUBDOMAIN_MENU = "cm-subdomain-menu";
 const PATTERN_MENU = "cm-pattern-menu";
@@ -96,6 +86,14 @@ const CUSTOMER_SUPPLIER_BLOCKERS: Partial<Record<UpstreamRole | DownstreamRole, 
   CF: "Conformist is not applicable in a customer-supplier relationship — a customer can negotiate.",
 };
 
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function padEntryHtml(
   icon: string,
   title: string,
@@ -103,7 +101,8 @@ function padEntryHtml(
 ): string {
   const draggable = options.draggable ? ` draggable="true"` : "";
   const danger = options.danger ? " cm-pad-entry--danger" : "";
-  return `<div class="entry cm-pad-entry${danger}"${draggable} title="${title}">${icon}</div>`;
+  const label = escapeAttribute(title);
+  return `<div class="entry cm-pad-entry${danger}"${draggable} title="${label}" aria-label="${label}">${icon}</div>`;
 }
 
 export default class CmContextPadProvider implements ContextPadProvider {
@@ -257,7 +256,7 @@ export default class CmContextPadProvider implements ContextPadProvider {
       "append-context": {
         group: "edit",
         html: padEntryHtml(
-          iconMarkup(ICON_ADD_BOX),
+          chromeIcon("square-plus"),
           "Append a connected context — click to place automatically, drag to position",
           { draggable: true },
         ),
@@ -268,7 +267,7 @@ export default class CmContextPadProvider implements ContextPadProvider {
       },
       connect: {
         group: "edit",
-        html: padEntryHtml(iconMarkup(ICON_ARROW_FORWARD), "Connect to another context", {
+        html: padEntryHtml(chromeIcon("arrow-right"), "Connect to another context", {
           draggable: true,
         }),
         action: {
@@ -289,7 +288,7 @@ export default class CmContextPadProvider implements ContextPadProvider {
       team: {
         group: "edit",
         html: padEntryHtml(
-          iconMarkup(ICON_TEAM),
+          chromeIcon("users"),
           `Set owning team — currently ${context.team ?? "none"}`,
         ),
         action: { click: () => this.labelEditing.activateTeam(context) },
@@ -412,7 +411,7 @@ export default class CmContextPadProvider implements ContextPadProvider {
       entries.roles = {
         group: "edit",
         html: padEntryHtml(
-          iconMarkup(ICON_TUNE),
+          chromeIcon("sliders-horizontal"),
           "Edit integration roles — OHS/PL upstream, ACL/CF downstream",
         ),
         action: {
@@ -422,7 +421,10 @@ export default class CmContextPadProvider implements ContextPadProvider {
       };
       entries["swap-ends"] = {
         group: "edit",
-        html: padEntryHtml(iconMarkup(ICON_SWAP), "Swap ends — reverse upstream/downstream"),
+        html: padEntryHtml(
+          chromeIcon("arrow-left-right"),
+          "Swap ends — reverse upstream/downstream",
+        ),
         action: { click: () => this.cmModeling.swapEnds(relationship) },
       };
     }
@@ -437,7 +439,7 @@ export default class CmContextPadProvider implements ContextPadProvider {
   private editLabelEntry(element: CmElement, title: string): ContextPadEntry {
     return {
       group: "edit",
-      html: padEntryHtml(iconMarkup(ICON_EDIT), `${title} — edit the name in place`),
+      html: padEntryHtml(chromeIcon("pencil"), `${title} — edit the name in place`),
       action: { click: () => this.labelEditing.activate(element) },
     };
   }
@@ -445,7 +447,7 @@ export default class CmContextPadProvider implements ContextPadProvider {
   private descriptionEntry(element: CmElement, placeholder: string): ContextPadEntry {
     return {
       group: "edit",
-      html: padEntryHtml(iconMarkup(ICON_NOTES), "Edit description"),
+      html: padEntryHtml(chromeIcon("text-align-start"), "Edit description"),
       action: {
         click: (event: Event) =>
           this.openPrompt(event, {
@@ -566,7 +568,7 @@ export default class CmContextPadProvider implements ContextPadProvider {
   private deleteEntry(elements: CmElement[], title: string): ContextPadEntry {
     return {
       group: "delete",
-      html: padEntryHtml(iconMarkup(ICON_DELETE), title, { danger: true }),
+      html: padEntryHtml(chromeIcon("trash"), title, { danger: true }),
       action: { click: () => this.modeling.removeElements(elements as Element[]) },
     };
   }

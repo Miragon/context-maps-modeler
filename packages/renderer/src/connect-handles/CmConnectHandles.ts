@@ -16,7 +16,7 @@ import type Dragging from "diagram-js/lib/features/dragging/Dragging";
 import type { Element } from "diagram-js/lib/model/Types";
 import { getMid } from "diagram-js/lib/layout/LayoutUtil";
 import { isCmContext } from "../model/di-types.js";
-import { ICON_ARROW_FORWARD, iconMarkup } from "../draw/icons.js";
+import { chromeIcon } from "../draw/lucide.js";
 
 const OVERLAY_TYPE = "cm-connect-handle";
 const HANDLE_SIZE = 28;
@@ -85,7 +85,12 @@ export default class CmConnectHandles {
       handle.className = "cm-connect-handle";
       handle.dataset.side = side;
       handle.title = "Connect to another context";
-      handle.innerHTML = `<span style="display:flex;transform:rotate(${rotationDeg}deg)">${iconMarkup(ICON_ARROW_FORWARD)}</span>`;
+      handle.setAttribute("aria-label", "Connect to another context");
+      const arrow = document.createElement("span");
+      arrow.className = "cm-connect-handle__arrow";
+      arrow.style.transform = `rotate(${rotationDeg}deg)`;
+      arrow.innerHTML = chromeIcon("arrow-right");
+      handle.append(arrow);
       handle.addEventListener("mousedown", (event: MouseEvent) => {
         if (event.button !== 0) return;
         event.preventDefault();

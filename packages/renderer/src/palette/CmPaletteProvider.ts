@@ -15,7 +15,7 @@ import type {
 import type { Element } from "diagram-js/lib/model/Types";
 import { ALL_SUBDOMAIN_SPECS } from "@miragon/context-maps-schema-model";
 import { contextIconSvg } from "../draw/palette-icons.js";
-import { lassoIconMarkup } from "../draw/icons.js";
+import { toolIcon } from "../draw/lucide.js";
 import type CmElementFactory from "../model/CmElementFactory.js";
 
 /** diagram-js highlights tools only inside the group named exactly `tools`. */
@@ -48,7 +48,7 @@ export default class CmPaletteProvider implements PaletteProvider {
     entries["lasso-tool"] = {
       group: GROUP_TOOLS,
       title: lassoTitle,
-      html: entryHtml(lassoIconMarkup(), lassoTitle, false),
+      html: entryHtml(toolIcon("square-dashed-mouse-pointer"), lassoTitle, false),
       action: {
         click: (event: Event) => this.lassoTool.activateSelection(event as MouseEvent),
       },

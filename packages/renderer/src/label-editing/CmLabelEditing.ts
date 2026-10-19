@@ -152,7 +152,7 @@ export default class CmLabelEditing {
           fontWeight: 400,
           lineHeight: 1.2,
           backgroundColor: "transparent",
-          border: "1px dashed rgba(51, 93, 229, 0.65)",
+          border: "1px dashed var(--cd-ui-interaktion)",
           textAlign: "center",
         },
         options: { centerVertically: true },
@@ -167,7 +167,7 @@ export default class CmLabelEditing {
       // In-place illusion: the element's own fill stays visible, a dashed
       // accent frame signals the edit state (the rendered name is hidden).
       backgroundColor: "transparent",
-      border: "1px dashed rgba(51, 93, 229, 0.65)",
+      border: "1px dashed var(--cd-ui-interaktion)",
       textAlign: "center",
     };
 
@@ -201,7 +201,7 @@ export default class CmLabelEditing {
         height,
       },
       text: (element as CmElement).cmLabel ?? "",
-      style: { ...style, backgroundColor: "rgba(255, 255, 255, 0.95)" },
+      style: { ...style, backgroundColor: "var(--cd-ui-flaeche-hoch)" },
       options: { centerVertically: true },
     };
   }

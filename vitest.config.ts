@@ -31,7 +31,9 @@ export default defineConfig({
           environment: "jsdom",
           include: [
             "packages/*/src/**/*.{test,spec}.{ts,tsx}",
+            "packages/*/test/**/*.{test,spec}.{ts,tsx}",
             "apps/*/src/**/*.{test,spec}.{ts,tsx}",
+            "apps/*/test/**/*.{test,spec}.{ts,tsx}",
           ],
           exclude: ["packages/renderer/test/browser/**", "**/node_modules/**", "**/dist/**"],
         },

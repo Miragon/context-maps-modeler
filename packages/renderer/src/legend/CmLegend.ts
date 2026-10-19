@@ -16,8 +16,10 @@ import {
   ALL_SUBDOMAIN_SPECS,
   DOWNSTREAM_ROLE_SPECS,
   MARK_COLORS,
+  MARK_TEXT_COLOR,
   UPSTREAM_ROLE_SPECS,
 } from "@miragon/context-maps-schema-model";
+import { chromeIcon } from "../draw/lucide.js";
 import { relationshipIconSvg, subdomainIconSvg } from "../draw/palette-icons.js";
 
 const ROLES: ReadonlyArray<{ token: string; label: string; description: string }> = [
@@ -56,7 +58,8 @@ function iconNode(svg: string): HTMLElement {
 function markNode(token: string): HTMLElement {
   const span = document.createElement("span");
   span.className = "cm-legend__mark";
-  span.style.background = MARK_COLORS[token];
+  span.style.background = MARK_COLORS[token] ?? "";
+  span.style.color = MARK_TEXT_COLOR;
   span.textContent = token;
   return span;
 }
@@ -126,8 +129,8 @@ export default class CmLegend {
     close.type = "button";
     close.className = "cm-legend__close";
     close.setAttribute("aria-expanded", "true");
-    close.setAttribute("aria-label", "Collapse legend");
-    close.textContent = "–";
+    close.setAttribute("aria-label", "Close legend");
+    close.innerHTML = chromeIcon("x");
     close.addEventListener("click", () => this.toggle());
     head.append(title, close);
 
@@ -167,12 +170,7 @@ export default class CmLegend {
     button.className = "cm-legend-toggle";
     button.setAttribute("aria-expanded", "false");
     button.setAttribute("aria-label", "Show legend");
-    const glyph = document.createElement("span");
-    glyph.setAttribute("aria-hidden", "true");
-    glyph.textContent = "▤";
-    const label = document.createElement("span");
-    label.textContent = "Legend";
-    button.append(glyph, label);
+    button.textContent = "Legend";
     button.addEventListener("click", () => this.toggle());
     return button;
   }
