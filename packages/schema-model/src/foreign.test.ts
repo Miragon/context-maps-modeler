@@ -125,3 +125,29 @@ describe("versions and bounds", () => {
     expect(parseDocument(at(0, 1e7)).ok).toBe(false);
   });
 });
+
+describe("parse issues", () => {
+  it("name the path of every invalid value", () => {
+    const result = parseDocument({
+      version: 1,
+      title: "t",
+      contexts: [
+        { id: "a", label: "A", position: { x: "left", y: 0 }, size: { width: 10, height: 10 } },
+      ],
+      relationships: [{ id: "r", from: "a", to: "b", pattern: "bogus" }],
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.issues?.map((issue) => issue.path)).toEqual([
+      ["contexts", 0, "position", "x"],
+      ["relationships", 0, "pattern"],
+    ]);
+  });
+
+  it("point at the whole text for a syntax error and at the version for a newer one", () => {
+    const syntax = parseDocumentText("{");
+    const newer = parseDocument({ version: 3 });
+    expect(!syntax.ok && syntax.issues?.[0]?.path).toEqual([]);
+    expect(!newer.ok && newer.issues?.[0]?.path).toEqual(["version"]);
+  });
+});

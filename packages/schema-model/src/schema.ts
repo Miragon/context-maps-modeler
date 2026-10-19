@@ -80,7 +80,30 @@ export const documentSchema = z.object({
   relationships: z.array(relationshipSchema),
 });
 
-export type ParseResult = { ok: true; document: CmDocument } | { ok: false; error: string };
+/** One reason a document is invalid, at the path of the offending value (`[]` = the whole text). */
+export interface ParseIssue {
+  path: ReadonlyArray<string | number>;
+  message: string;
+}
+
+export type ParseResult =
+  | { ok: true; document: CmDocument }
+  | {
+      ok: false;
+      error: string;
+      /** Where the document is invalid; `parseDocument` and `parseDocumentText` always set it. */
+      issues?: ParseIssue[];
+    };
+
+function failure(issues: ParseIssue[]): ParseResult {
+  return {
+    ok: false,
+    error: issues
+      .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
+      .join("; "),
+    issues,
+  };
+}
 
 /**
  * Validates and (if necessary) migrates unknown data into a {@link CmDocument}.
@@ -89,23 +112,28 @@ export type ParseResult = { ok: true; document: CmDocument } | { ok: false; erro
  * contexts and its relationships (see `foreign.ts`), so a save writes them back.
  */
 export function parseDocument(input: unknown): ParseResult {
-  if (Array.isArray(input)) return { ok: false, error: "(root): expected an object, got a list" };
+  if (Array.isArray(input))
+    return failure([{ path: [], message: "expected an object, got a list" }]);
   const newer = newerVersionOf(input);
   if (newer !== undefined) {
-    return {
-      ok: false,
-      error: `version: ${newer} is newer than this modeler reads (${DOCUMENT_VERSION}); update the modeler to open this file`,
-    };
+    return failure([
+      {
+        path: ["version"],
+        message: `${newer} is newer than this modeler reads (${DOCUMENT_VERSION}); update the modeler to open this file`,
+      },
+    ]);
   }
   const migrated = migrate(input);
   const result = documentSchema.safeParse(migrated);
   if (!result.success) {
-    return {
-      ok: false,
-      error: result.error.issues
-        .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-        .join("; "),
-    };
+    return failure(
+      result.error.issues.map((issue) => ({
+        path: issue.path.filter(
+          (segment): segment is string | number => typeof segment !== "symbol",
+        ),
+        message: issue.message,
+      })),
+    );
   }
   return {
     ok: true,
@@ -124,10 +152,12 @@ export function parseDocumentText(text: string): ParseResult {
   try {
     value = JSON.parse(json);
   } catch (error) {
-    return {
-      ok: false,
-      error: `(root): not valid JSON — ${error instanceof Error ? error.message : String(error)}`,
-    };
+    return failure([
+      {
+        path: [],
+        message: `not valid JSON — ${error instanceof Error ? error.message : String(error)}`,
+      },
+    ]);
   }
   return parseDocument(value);
 }
