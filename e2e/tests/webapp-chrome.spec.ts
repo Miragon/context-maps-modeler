@@ -468,6 +468,28 @@ test.describe("webapp: the shell web chrome and the app behind it", () => {
     expect(await mapText(page)).toBe(edited);
   });
 
+  test("a copy the app cannot open stays in the browser, and a toast says so", async ({ page }) => {
+    const newer = JSON.stringify({
+      version: 2,
+      title: "Saved by a newer modeler",
+      contexts: [],
+      relationships: [],
+    });
+    await page.goto("/");
+    await waitForApp(page);
+    await page.evaluate((text) => localStorage.setItem("cm-modeler:document:v1", text), newer);
+
+    await page.reload();
+    await waitForApp(page);
+
+    await expect(startScreen(page)).toBeVisible();
+    await expect(toast(page, "Couldn't open the map saved in this browser.")).toHaveAttribute(
+      "data-status",
+      "danger",
+    );
+    expect(await page.evaluate(() => localStorage.getItem("cm-modeler:document:v1"))).toBe(newer);
+  });
+
   test("the legend remembers whether it is open", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await openExample(page);

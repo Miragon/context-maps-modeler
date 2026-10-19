@@ -56,6 +56,15 @@ export function loadFromStorage(): CmDocument | null {
   }
 }
 
+/** Whether the browser holds a copy of a map at all, readable or not. */
+export function hasStoredDocument(): boolean {
+  try {
+    return Boolean(storage()?.getItem(DOCUMENT_KEY));
+  } catch {
+    return false;
+  }
+}
+
 /** Whether the legend was open when this browser last showed it; undefined before the first toggle. */
 export function readLegendOpen(): boolean | undefined {
   try {

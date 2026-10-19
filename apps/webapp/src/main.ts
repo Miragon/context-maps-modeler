@@ -53,6 +53,7 @@ import {
 } from "./io/url";
 import { importNotes, importNotesText, mapProblems } from "./problems";
 import {
+  hasStoredDocument,
   loadFromStorage,
   readLegendOpen,
   saveToStorage,
@@ -91,6 +92,8 @@ const IMPORT_TYPES = [CML_EXTENSION];
 const DROP_TYPES = [".cm", ".json", CML_EXTENSION, "application/json"];
 const BROKEN_LINK_TEXT =
   "Couldn't read the map in this link. Check that you copied the whole link.";
+const UNREADABLE_COPY_TEXT =
+  "Couldn't open the map saved in this browser. The next map you start or open replaces it.";
 
 const app = document.getElementById("app");
 if (!app) throw new Error("index.html has no #app root.");
@@ -536,19 +539,27 @@ window.addEventListener("hashchange", onHashChange);
 
 const linked = readDocumentFromLocation();
 const brokenLink = hashHoldsDocument(location.hash) && (linked === null || !isImportable(linked));
-const restored = loadFromStorage();
+const stored = loadFromStorage();
+const restored = stored !== null && isImportable(stored) ? stored : null;
+// A copy this version cannot open (one a newer modeler wrote, say) is not overwritten with an empty
+// map on the start screen: a reload with that modeler still finds it.
+const unreadableCopy = restored === null && hasStoredDocument();
 if (linked !== null && !brokenLink) openDocument(linked, [], true);
-else if (restored !== null && isImportable(restored) && !isEmptyMap(restored)) {
+else if (restored !== null && !isEmptyMap(restored)) {
   openDocument(restored, [], false);
 } else {
-  modeler.importDocument(restored !== null && isImportable(restored) ? restored : emptyDocument());
+  modeler.importDocument(restored ?? emptyDocument());
   viewport.afterImport(); // an empty map at 100 %
   shell.setEmptyState(true);
   updateDocumentTitle();
   updateProblems();
-  persist();
+  if (unreadableCopy) clearLocationHash();
+  else persist();
 }
 if (brokenLink) shell.toast({ status: "danger", text: BROKEN_LINK_TEXT });
+else if (unreadableCopy && shell.isEmptyStateShown()) {
+  shell.toast({ status: "danger", text: UNREADABLE_COPY_TEXT });
+}
 
 let destroyed = false;
 
