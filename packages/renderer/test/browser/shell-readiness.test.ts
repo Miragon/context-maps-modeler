@@ -73,6 +73,22 @@ test("keys from outside the canvas or already handled never reach the canvas", (
   }
 });
 
+test("Delete on a focused palette entry is the palette's and keeps the selection", () => {
+  const modeler = mountModeler();
+  try {
+    const selection = modeler.get<SelectionLike>("selection");
+    const registry = modeler.get<{ get(id: string): unknown }>("elementRegistry");
+    selection.select(registry.get("ctx_cfp"));
+    const entry = modeler.container.querySelector<HTMLElement>(
+      '.djs-palette [data-action="lasso-tool"]',
+    )!;
+    expect(press(entry, { key: "Delete" }).defaultPrevented).toBe(false);
+    expect(registry.get("ctx_cfp")).toBeDefined();
+  } finally {
+    modeler.destroy();
+  }
+});
+
 test("without undo keys Cmd/Ctrl+Z goes on to the host, unprevented and unhandled", () => {
   const modeler = mountModeler({ undoRedoKeys: false });
   try {

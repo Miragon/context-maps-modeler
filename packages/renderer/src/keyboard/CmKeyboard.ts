@@ -35,9 +35,14 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-/** A key aimed at the canvas: from inside its container, or with nothing focused at all. */
+/**
+ * A key aimed at the canvas: from inside its container, or with nothing focused at all. The
+ * palette lives in the container too, but a key on a focused palette entry is the palette's: Delete
+ * there must not remove the selected elements.
+ */
 function isCanvasTarget(target: EventTarget | null, container: HTMLElement): boolean {
   if (!(target instanceof Node)) return false;
+  if (target instanceof Element && target.closest(".djs-palette")) return false;
   const ownerDocument = container.ownerDocument;
   return (
     container.contains(target) ||
