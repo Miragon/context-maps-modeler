@@ -56,6 +56,14 @@ describe("mapProblems", () => {
     expect(problemCounts(problems)).toEqual({ count: 1, errors: 0 });
   });
 
+  it("names an id the canvas keeps for itself at that id", () => {
+    const text = sample.replace('"id": "ctx_cfp"', '"id": "cm-root"');
+    const problems = mapProblems(text);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]!.message).toMatch(/^contexts\.\d+\.id: the id "cm-root" is reserved/);
+    expect(textOf(text, problems[0]!)).toBe('"id": "cm-root"');
+  });
+
   it("puts a duplicate id on its copy", () => {
     const text = sample.replace('"id": "ctx_cfp"', '"id": "ctx_auth"');
     const duplicate = mapProblems(text).find((problem) => problem.rule === "unique-ids");

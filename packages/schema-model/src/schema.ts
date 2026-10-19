@@ -30,6 +30,25 @@ import { CONTEXT_KEYS, DOCUMENT_KEYS, RELATIONSHIP_KEYS, foreignFields } from ".
  */
 export const MAX_COORDINATE = 1_000_000;
 
+/** The id of the canvas's own root element, which holds the map's title. */
+export const DIAGRAM_ROOT_ID = "cm-root";
+
+/**
+ * Whether `id` is one the canvas gives its own root elements: the map's root and the implicit
+ * roots diagram-js creates. The canvas keeps one element per id, so a context or relationship
+ * with such an id could not be drawn, and the file is rejected with the id as the reason.
+ */
+export function isReservedId(id: string): boolean {
+  return id === DIAGRAM_ROOT_ID || id.startsWith("__implicitroot");
+}
+
+const elementIdSchema = z
+  .string()
+  .min(1)
+  .refine((id) => !isReservedId(id), {
+    error: (issue) => `the id "${String(issue.input)}" is reserved for the diagram itself`,
+  });
+
 const subdomainTypeSchema = z.enum(SUBDOMAIN_TYPES as unknown as [string, ...string[]]);
 const patternSchema = z.enum(RELATIONSHIP_PATTERNS as unknown as [string, ...string[]]);
 const upstreamRoleSchema = z.enum(UPSTREAM_ROLES as unknown as [string, ...string[]]);
@@ -50,7 +69,7 @@ const positionSchema = z.object({
 const hexColor = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "expected a hex colour");
 
 export const boundedContextSchema = z.object({
-  id: z.string().min(1),
+  id: elementIdSchema,
   label: z.string(),
   subdomainType: subdomainTypeSchema.optional(),
   team: z.string().optional(),
@@ -62,7 +81,7 @@ export const boundedContextSchema = z.object({
 });
 
 export const relationshipSchema = z.object({
-  id: z.string().min(1),
+  id: elementIdSchema,
   from: z.string().min(1),
   to: z.string().min(1),
   pattern: patternSchema,
