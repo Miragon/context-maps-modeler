@@ -19,6 +19,7 @@ import type { Element, ShapeLike } from "diagram-js/lib/model/Types";
 import { CONTEXT_NAME_TOP, CONTEXT_TEAM_RESERVE, FONT } from "../draw/styles.js";
 import { isCmContext, isCmElement, type CmContext, type CmElement } from "../model/di-types.js";
 import type CmModeling from "../modeling/CmModeling.js";
+import { READ_ONLY_CHANGED_EVENT, type CmReadOnly } from "../read-only/index.js";
 
 type EditMode = "name" | "team";
 
@@ -65,7 +66,14 @@ interface SuspendedEdit {
 }
 
 export default class CmLabelEditing {
-  static $inject = ["eventBus", "canvas", "directEditing", "cmModeling", "elementRegistry"];
+  static $inject = [
+    "eventBus",
+    "canvas",
+    "directEditing",
+    "cmModeling",
+    "elementRegistry",
+    "cmReadOnly",
+  ];
 
   /** Which property the CURRENT activation edits (set right before activate). */
   private mode: EditMode = "name";
@@ -79,6 +87,7 @@ export default class CmLabelEditing {
     private readonly directEditing: DirectEditingService,
     private readonly modeling: CmModeling,
     private readonly elementRegistry: ElementRegistry,
+    private readonly readOnly: Pick<CmReadOnly, "isReadOnly">,
   ) {
     // Registered as a plain object: the provider contract claims the method
     // name `activate` for context creation, while this service keeps
@@ -121,6 +130,13 @@ export default class CmLabelEditing {
     eventBus.on("diagram.destroy", () => {
       clearTimeout(this.resumeTimer);
       this.suspended = undefined;
+    });
+    // A read-only canvas has no label editor (guide §13.5), also not on a double-click.
+    eventBus.on("directEditing.activate.allowed", 2000, () =>
+      this.readOnly.isReadOnly() ? false : undefined,
+    );
+    eventBus.on(READ_ONLY_CHANGED_EVENT, (event: { readOnly?: boolean }) => {
+      if (event.readOnly) directEditing.cancel();
     });
   }
 

@@ -13,7 +13,7 @@ export { Viewer } from "./Viewer.js";
 export { NavigatedViewer } from "./NavigatedViewer.js";
 export { Modeler } from "./Modeler.js";
 export { CmBaseViewer } from "./CmBaseViewer.js";
-export type { CmViewerOptions, EventCallback } from "./CmBaseViewer.js";
+export type { CmViewerOptions, EventCallback, FreeRectInsets } from "./CmBaseViewer.js";
 
 // Modules (for additionalModules / extension) + their services
 export { cmModelModule, CmElementFactory } from "./model/index.js";
@@ -23,11 +23,14 @@ export { cmModelingModule, CmModeling } from "./modeling/index.js";
 export { cmRulesModule, CmRules } from "./rules/index.js";
 export { cmBehaviorsModule, CmFlatModelBehavior } from "./behaviors/index.js";
 export { cmPaletteModule, CmPaletteProvider } from "./palette/index.js";
+export type { CmPaletteConfig } from "./palette/index.js";
 export { cmConnectHandlesModule, CmConnectHandles } from "./connect-handles/index.js";
 export { cmContextPadModule, CmContextPadProvider } from "./context-pad/index.js";
 export { cmLegendModule, CmLegend } from "./legend/index.js";
 export { cmLabelEditingModule, CmLabelEditing } from "./label-editing/index.js";
 export { cmKeyboardModule, CmKeyboard } from "./keyboard/index.js";
+export type { CmKeyboardConfig } from "./keyboard/index.js";
+export { cmReadOnlyModule, CmReadOnly, READ_ONLY_CHANGED_EVENT } from "./read-only/index.js";
 export { cmZOrderModule, CmZOrder } from "./zorder/index.js";
 
 // Runtime types & guards

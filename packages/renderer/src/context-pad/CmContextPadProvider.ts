@@ -69,6 +69,7 @@ import {
 import type CmModeling from "../modeling/CmModeling.js";
 import type CmLabelEditing from "../label-editing/CmLabelEditing.js";
 import type CmElementFactory from "../model/CmElementFactory.js";
+import { READ_ONLY_CHANGED_EVENT, type CmReadOnly } from "../read-only/index.js";
 import { contextIconSvg, relationshipIconSvg, roleChipSvg } from "../draw/palette-icons.js";
 import { chromeIcon } from "../draw/lucide.js";
 
@@ -122,6 +123,7 @@ export default class CmContextPadProvider implements ContextPadProvider {
     "selection",
     "canvas",
     "scheduler",
+    "cmReadOnly",
   ];
 
   /** The last pad-opened menu, so a roles toggle can re-open it in place. */
@@ -143,11 +145,19 @@ export default class CmContextPadProvider implements ContextPadProvider {
     private readonly selection: Selection,
     private readonly canvas: Canvas,
     private readonly scheduler: Scheduler,
+    private readonly readOnly: Pick<CmReadOnly, "isReadOnly">,
   ) {
     // Injecting Connect instantiates it so its connect.* drag handlers exist
     // (same reason as CmConnectHandles — the module does not eagerly init it).
     void connect;
     contextPad.registerProvider(this);
+    // A read-only canvas has no context pad (guide §13.5): nothing it offers may change the map.
+    eventBus.on(READ_ONLY_CHANGED_EVENT, (event: { readOnly?: boolean }) => {
+      if (!event.readOnly) return;
+      this.cancelPrompt();
+      popupMenu.close();
+      contextPad.close();
+    });
     popupMenu.registerProvider(SUBDOMAIN_MENU, {
       getPopupMenuEntries: (target: PopupMenuTarget) => this.subdomainMenuEntries(target),
     });
@@ -237,12 +247,14 @@ export default class CmContextPadProvider implements ContextPadProvider {
   }
 
   getContextPadEntries(element: Element): ContextPadEntries {
+    if (this.readOnly.isReadOnly()) return {};
     if (isCmContext(element)) return this.contextEntries(element);
     if (isCmRelationship(element)) return this.relationshipEntries(element);
     return {};
   }
 
   getMultiElementContextPadEntries(elements: Element[]): ContextPadEntries {
+    if (this.readOnly.isReadOnly()) return {};
     const cmElements = elements.filter(isCmElement);
     if (cmElements.length !== elements.length) return {};
     return { delete: this.deleteEntry(cmElements, "Delete selection") };

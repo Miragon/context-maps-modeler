@@ -21,21 +21,41 @@ import type CmLabelEditing from "./label-editing/CmLabelEditing.js";
 import type CmModeling from "./modeling/CmModeling.js";
 import { ROOT_ID, type ImportWarning, type RootBusinessObject } from "./io/types.js";
 
+/** Container margins in screen px that a host's chrome covers. */
+export interface FreeRectInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
 export interface CmViewerOptions {
   /** Host element. When absent, a detached <div> is created (attach later). */
-  container?: HTMLElement;
-  width?: number | string;
-  height?: number | string;
+  container?: HTMLElement | undefined;
+  width?: number | string | undefined;
+  height?: number | string | undefined;
   /** Appended to the module list (extension point). */
-  additionalModules?: ModuleDeclaration[];
+  additionalModules?: ModuleDeclaration[] | undefined;
+  /**
+   * Bind Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z and Cmd/Ctrl+Y to the canvas undo/redo (default true).
+   * Pass false when the host owns the history (the VS Code document), so the keys reach it.
+   */
+  undoRedoKeys?: boolean | undefined;
+  /**
+   * The margins of the container the host's chrome covers (palette row, zoom panel, legend). The
+   * fit after an import centres the content in what is left, and an element created from the
+   * palette with Enter or Space lands in its centre (guide §5.5, §5.9). Default: room for the
+   * renderer's own palette.
+   */
+  freeRectInsets?: (() => FreeRectInsets) | undefined;
 }
 
 export type EventCallback<T = unknown> = (event: T) => void;
 
 type RootWithMeta = Root & { businessObject?: RootBusinessObject };
 
-/** Margins (screen px) a fit after an import keeps free around the content. */
-const IMPORT_FIT_INSETS = { top: 84, right: 56, bottom: 56, left: 56 } as const;
+/** Margins (screen px) the renderer's own palette needs, without a host's chrome around it. */
+const DEFAULT_FREE_RECT_INSETS: FreeRectInsets = { top: 84, right: 56, bottom: 56, left: 56 };
 
 /**
  * diagram-js reads its zoom back rounded to three decimals: a fit below 0.0005 would read back as
@@ -75,7 +95,12 @@ export abstract class CmBaseViewer {
   private _ensureDiagram(): Diagram {
     if (!this._diagram) {
       const modules = [...this._getModules(), ...(this._options.additionalModules ?? [])];
-      this._diagram = new Diagram({ canvas: { container: this._container }, modules });
+      this._diagram = new Diagram({
+        canvas: { container: this._container },
+        modules,
+        cmKeyboard: { undoRedoKeys: this._options.undoRedoKeys ?? true },
+        cmPalette: { freeRectInsets: this.freeRectInsets },
+      });
     }
     return this._diagram;
   }
@@ -84,6 +109,10 @@ export abstract class CmBaseViewer {
   get<T>(name: string): T {
     return this._ensureDiagram().get<T>(name);
   }
+
+  /** The margins the host's chrome covers right now. */
+  private readonly freeRectInsets = (): FreeRectInsets =>
+    this._options.freeRectInsets?.() ?? DEFAULT_FREE_RECT_INSETS;
 
   /** A service only some of the viewers have (the Modeler's editing services), else null. */
   private _optional<T>(name: string): T | null {
@@ -206,7 +235,7 @@ export abstract class CmBaseViewer {
       canvas.viewbox({ x: 0, y: 0, width, height });
       return;
     }
-    const insets = IMPORT_FIT_INSETS;
+    const insets = this.freeRectInsets();
     const freeWidth = Math.max(width - insets.left - insets.right, 1);
     const freeHeight = Math.max(height - insets.top - insets.bottom, 1);
     const contentWidth = Math.max(maxX - minX, 1);

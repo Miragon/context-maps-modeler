@@ -168,6 +168,10 @@
   border-radius: var(--cd-radius-md);
   box-shadow: var(--cd-shadow-2);
 }
+/* A read-only canvas offers nothing: no empty island under the lock (guide §13.5). */
+.djs-context-pad.open:not(:has(.entry)) {
+  display: none;
+}
 /* diagram-js anchors a connection's pad at the LAST waypoint — on the target context's edge. When
    the closing segment points into that box (rightward / downward), flip the stack to the free side
    so it never covers the target. */
