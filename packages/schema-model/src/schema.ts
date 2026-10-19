@@ -270,7 +270,7 @@ export function validateDocument(doc: CmDocument): ValidationReport {
   const seenPairs = new Map<string, Relationship>();
   for (const r of doc.relationships) {
     if (r.from === r.to) continue;
-    const pair = [r.from, r.to].sort().join(" ");
+    const pair = [r.from, r.to].sort().join("\u0000");
     const first = seenPairs.get(pair);
     if (first)
       errors.push({
