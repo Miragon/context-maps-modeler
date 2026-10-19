@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Modeler } from "@miragon/context-maps-renderer";
+import { Modeler, cmLegendModule } from "@miragon/context-maps-renderer";
 import { saveToStorage } from "./persistence";
 import { writeDocumentToLocation } from "@/io/url";
 import { ModelerContext, type ModelerContextValue } from "./modelerContext";
@@ -17,7 +17,11 @@ export function ModelerProvider({ children }: { children: ReactNode }) {
   // Fill the full-bleed `.tt-canvas` host. Without an explicit height the
   // renderer falls back to its standalone 600px default (it's created detached
   // and only attached later via `attachTo`, so it can't infer the host size).
-  if (!modelerRef.current) modelerRef.current = new Modeler({ height: "100%" });
+  // The legend card is opt-in since the modeler shell renders the legend itself; this app has no
+  // shell yet.
+  if (!modelerRef.current) {
+    modelerRef.current = new Modeler({ height: "100%", additionalModules: [cmLegendModule] });
+  }
   const modeler = modelerRef.current;
   // Dev affordance: expose the modeler for debugging / automation.
   if (import.meta.env.DEV) (window as unknown as { __cmModeler?: Modeler }).__cmModeler = modeler;

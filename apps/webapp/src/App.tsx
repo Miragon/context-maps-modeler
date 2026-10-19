@@ -12,7 +12,6 @@ import { Menu } from "@/ui/Menu";
 import { ShareButton } from "@/ui/ShareButton";
 import { LegalNotice } from "@/ui/LegalNotice";
 import { HelpDialog } from "@/ui/HelpDialog";
-import { HoverTooltip } from "@/ui/HoverTooltip";
 import { Toaster } from "@/ui/Toaster";
 
 export default function App() {
@@ -29,7 +28,6 @@ export default function App() {
         </div>
         <LegalNotice />
         <HelpDialog />
-        <HoverTooltip />
         <Toaster />
       </div>
     </ModelerProvider>
