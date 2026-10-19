@@ -1,12 +1,9 @@
-import type { Relationship } from "@miragon/context-maps-schema-model";
+import { DIAGRAM_ROOT_ID, type Relationship } from "@miragon/context-maps-schema-model";
+
+export { isReservedId } from "@miragon/context-maps-schema-model";
 
 /** ID of the diagram-js root element holding the Context Maps diagram. */
-export const ROOT_ID = "cm-root";
-
-/** Ids diagram-js gives its own root elements; a document element must not take them. */
-export function isReservedId(id: string): boolean {
-  return id === ROOT_ID || id.startsWith("__implicitroot");
-}
+export const ROOT_ID = DIAGRAM_ROOT_ID;
 
 export interface ImportWarning {
   readonly message: string;
