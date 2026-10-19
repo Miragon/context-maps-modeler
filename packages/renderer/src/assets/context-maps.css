@@ -54,7 +54,7 @@
   stroke-dasharray: 3 3;
 }
 
-/* --- Palette without the modeler shell (the web app) ---------------------- */
+/* --- Palette without the modeler shell (hosts that embed the renderer alone) */
 /* A palette the shell skins (data-chrome="palette") takes the shell's look alone. */
 .djs-palette:not([data-chrome="palette"]) {
   left: 50%;
@@ -435,6 +435,11 @@
   flex-direction: column;
   gap: 4px;
 }
+/* The chrome's legend floats beside the canvas, not in it: while a drag runs on the canvas it lets
+   the pointer through, so releasing a connect drag on a context behind it reaches that context. */
+:has(> .cm-djs-container > .cm-dragging) > [data-chrome="legend"] {
+  pointer-events: none;
+}
 
 .cm-visually-hidden {
   position: absolute;
@@ -603,10 +608,10 @@
   display: none;
 }
 
-/* --- Keyboard shortcuts dialog (guide §5.4, §8) ---------------------------- */
+/* --- Dialogs: keyboard shortcuts, map title (guide §5.4, §8) --------------- */
 /* A modal <dialog> in the chrome's root: showModal() puts it in the top layer, above every island,
    without a layer token. */
-.cm-shortcuts {
+.cm-dialog {
   box-sizing: border-box;
   width: min(560px, 100cqw - 32px);
   max-width: none;
@@ -620,33 +625,34 @@
   border-radius: var(--cd-radius-md);
   box-shadow: var(--cd-shadow-3);
 }
-.cm-shortcuts[open] {
+.cm-dialog[open] {
   display: flex;
 }
-.cm-shortcuts::backdrop {
+.cm-dialog::backdrop {
   background: var(--cd-ui-backdrop);
   backdrop-filter: blur(3px) grayscale(1);
 }
-.cm-shortcuts-panel {
+.cm-dialog-panel,
+.cm-dialog-form {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
 }
-.cm-shortcuts-header {
+.cm-dialog-header {
   display: flex;
   gap: 8px;
   align-items: center;
   justify-content: space-between;
   padding: 16px 16px 8px 24px;
 }
-.cm-shortcuts-title {
+.cm-dialog-title {
   margin: 0;
   font-size: 21px;
   font-weight: 600;
   line-height: 1.3;
 }
-.cm-shortcuts-close {
+.cm-dialog-close {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -660,26 +666,115 @@
   border: none;
   border-radius: var(--cd-radius-sm);
 }
-.cm-shortcuts-close:hover {
+.cm-dialog-close:hover {
   color: var(--cd-ui-interaktion);
   background: var(--cd-ui-hover);
 }
-.cm-shortcuts-close:focus-visible {
-  outline: 2px solid var(--cd-ui-fokus);
-  outline-offset: 2px;
-}
-.cm-shortcuts-close svg {
+.cm-dialog-close svg {
   display: block;
 }
-.cm-shortcuts-body {
+.cm-dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 16px;
   min-height: 0;
   padding: 8px 24px 24px;
   overflow: auto;
   font-size: 13px;
   line-height: 1.5;
+}
+.cm-dialog-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 16px 24px;
+  border-top: 1px solid var(--cd-ui-linie);
+}
+/* A field (guide §8): sunk into the panel on --cd-ui-grund, the label 4px above it. */
+.cm-dialog-label {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cm-dialog-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--cd-ui-text);
+  background: var(--cd-ui-grund);
+  border: 1px solid var(--cd-ui-kontur);
+  border-radius: var(--cd-radius-sm);
+}
+.cm-dialog-input::placeholder {
+  color: var(--cd-ui-text-leise);
+}
+.cm-dialog-input:focus {
+  border-color: var(--cd-ui-interaktion);
+}
+/* Buttons (guide §8): 36px, 13px/600, radius md; Cancel secondary, left of the primary action. */
+.cm-dialog-button {
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--cd-radius-md);
+  transition:
+    background-color var(--cd-motion-fast) var(--cd-ease),
+    box-shadow var(--cd-motion-fast) var(--cd-ease),
+    transform var(--cd-motion-fast) var(--cd-ease);
+}
+.cm-dialog-button[data-variant="secondary"] {
+  color: var(--cd-ui-text);
+  background: var(--cd-ui-flaeche-hoch);
+  border: 1px solid var(--cd-ui-linie);
+}
+.cm-dialog-button[data-variant="secondary"]:hover {
+  color: var(--cd-ui-link);
+  background: var(--cd-ui-hover);
+  border-color: var(--cd-ui-interaktion);
+}
+/* The one place with fixed palette tokens: guide §8 fills the primary button with --cd-blau and
+   white text in both modes, hover --cd-blau-link. */
+.cm-dialog-button[data-variant="primary"] {
+  color: var(--cd-weiss);
+  background: var(--cd-blau);
+  border: 1px solid transparent;
+  box-shadow: var(--cd-shadow-1);
+}
+.cm-dialog-button[data-variant="primary"]:hover,
+.cm-dialog-button[data-variant="primary"]:active {
+  background: var(--cd-blau-link);
+  box-shadow: var(--cd-shadow-2);
+  transform: translateY(-1px);
+}
+.cm-dialog-close:focus-visible,
+.cm-dialog-button:focus-visible,
+.cm-dialog-input:focus-visible {
+  outline: 2px solid var(--cd-ui-fokus);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-dialog-button {
+    transition: none;
+  }
+  .cm-dialog-button[data-variant="primary"]:hover,
+  .cm-dialog-button[data-variant="primary"]:active {
+    transform: none;
+  }
+}
+/* The map title asks for one field: the narrow width of guide §8's short dialogs. */
+.cm-title-dialog {
+  width: min(440px, 100cqw - 32px);
+}
+.cm-shortcuts-body {
+  gap: 16px;
 }
 .cm-shortcuts-group-title {
   margin: 0 0 4px;
@@ -724,20 +819,30 @@
   margin-left: 6px;
 }
 /* High contrast (guide §6, §8): no shadow but a --cd-ui-kontur edge, and a 3px focus ring; forced
-   colours draw the edge in CanvasText and the ring in Highlight. The shell applies these rules
-   only to its own classes, so the modeler's dialog repeats them. */
-:root[data-cd-kontrast="hoch"] .cm-shortcuts {
+   colours draw the edges in CanvasText and ButtonText and the ring in Highlight. The shell applies
+   these rules only to its own classes, so the modeler's dialogs repeat them. */
+:root[data-cd-kontrast="hoch"] .cm-dialog {
   border-color: var(--cd-ui-kontur);
   box-shadow: none;
 }
-:root[data-cd-kontrast="hoch"] .cm-shortcuts-close:focus-visible {
+:root[data-cd-kontrast="hoch"] .cm-dialog-button {
+  box-shadow: none;
+}
+:root[data-cd-kontrast="hoch"] .cm-dialog-close:focus-visible,
+:root[data-cd-kontrast="hoch"] .cm-dialog-button:focus-visible,
+:root[data-cd-kontrast="hoch"] .cm-dialog-input:focus-visible {
   outline-width: 3px;
 }
 @media (forced-colors: active) {
-  .cm-shortcuts {
+  .cm-dialog {
     border-color: CanvasText;
   }
-  .cm-shortcuts-close:focus-visible {
+  .cm-dialog-button {
+    border-color: ButtonText;
+  }
+  .cm-dialog-close:focus-visible,
+  .cm-dialog-button:focus-visible,
+  .cm-dialog-input:focus-visible {
     outline-color: Highlight;
   }
 }

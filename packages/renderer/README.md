@@ -134,8 +134,15 @@ What a chrome around the canvas shows, typed structurally (a `@miragon/modeler-s
 - `renderLegend(body, { tooltip })` renders the notation legend (subdomain types, integration roles,
   relationship patterns) into a chrome's legend card, each row explained in the chrome's tooltip.
   Hosts without such a chrome add `cmLegendModule`, a legend card on the canvas.
-- `contextMapMenu({ exports, showKeyboardShortcuts })` builds the Export group (PNG, SVG, JSON, CML)
-  and the Help group's "Keyboard shortcuts…"; `createShortcutsDialog(chrome)` is that dialog.
+- `contextMapMenu({ exports, showKeyboardShortcuts, editTitle })` builds the Model group's "Map
+  title…" (with `editTitle`), the Export group (PNG, SVG, JSON, CML; an export's `shortcut` shows as
+  its chip) and the Help group's "Keyboard shortcuts…". `createShortcutsDialog(chrome, { fileKeys })`
+  is that dialog, with a File group (Open… and Export as JSON on Cmd/Ctrl+O and S) for a web app
+  that binds those keys; `createTitleDialog(chrome, { title, setTitle })` renames the map in a
+  modal dialog with one field, Cancel and Apply. Both dialogs live in the chrome's root and go with
+  `destroy()`.
+- While a drag runs on the canvas, the chrome's legend island (`[data-chrome="legend"]`) lets the
+  pointer through, so a connect drag released on a context behind it still connects.
 - `cmReadOnly` (part of the `Modeler`) locks every edit while a host cannot take edits from the
   canvas, an invalid file in an IDE: no context pad, move, create, connect, delete or label editor;
   selection, zoom, pan, select all and export stay.

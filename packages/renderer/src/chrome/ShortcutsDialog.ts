@@ -1,35 +1,20 @@
-import { chromeIcon } from "../draw/lucide.js";
-import { contextMapShortcuts, type ShortcutGroup, type ShortcutsChrome } from "./shortcuts.js";
+import { createChromeDialog, element, type ChromeDialog, type DialogChrome } from "./dialog.js";
+import {
+  contextMapShortcuts,
+  type ContextMapShortcutOptions,
+  type ShortcutGroup,
+  type ShortcutsChrome,
+} from "./shortcuts.js";
 
 const DIALOG_CLASS = "cm-shortcuts";
 const TITLE_ID = "cm-shortcuts-title";
 
 /** What the dialog needs of the chrome around the map; a `@miragon/modeler-shell` handle fits. */
-export interface ShortcutsDialogChrome extends ShortcutsChrome {
-  /** Where the dialog lives (the shell root), so it shares the chrome's mode and fonts. */
-  readonly root: HTMLElement;
-  readonly messages: ShortcutsChrome["messages"] & { readonly close: string };
-  /** The control the focus returns to once the dialog closes. */
-  readonly menu: { readonly trigger: HTMLElement };
+export interface ShortcutsDialogChrome extends ShortcutsChrome, DialogChrome {
+  readonly messages: ShortcutsChrome["messages"] & DialogChrome["messages"];
 }
 
-export interface ShortcutsDialog {
-  open(): void;
-  isOpen(): boolean;
-  close(): void;
-  destroy(): void;
-}
-
-function element<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className: string,
-  text?: string,
-): HTMLElementTagNameMap[K] {
-  const created = document.createElement(tag);
-  created.className = className;
-  if (text !== undefined) created.textContent = text;
-  return created;
-}
+export type ShortcutsDialog = ChromeDialog;
 
 function shortcutTable(group: ShortcutGroup, index: number): HTMLElement {
   const section = element("section", `${DIALOG_CLASS}-group`);
@@ -51,60 +36,22 @@ function shortcutTable(group: ShortcutGroup, index: number): HTMLElement {
   return section;
 }
 
-function dialogContent(chrome: ShortcutsDialogChrome, onClose: () => void): HTMLElement {
-  const panel = element("div", `${DIALOG_CLASS}-panel`);
-  const header = element("header", `${DIALOG_CLASS}-header`);
-  const title = element("h3", `${DIALOG_CLASS}-title`, "Keyboard shortcuts");
-  title.id = TITLE_ID;
-  const close = element("button", `${DIALOG_CLASS}-close`);
-  close.type = "button";
-  close.setAttribute("aria-label", chrome.messages.close);
-  close.innerHTML = chromeIcon("x");
-  close.addEventListener("click", onClose);
-  header.append(title, close);
-
-  const body = element("div", `${DIALOG_CLASS}-body`);
-  body.append(...contextMapShortcuts(chrome).map(shortcutTable));
-  panel.append(header, body);
-  return panel;
-}
-
 /**
- * The "Keyboard shortcuts…" dialog of the Help group (guide §5.4, §8), a native modal <dialog>
- * inside the chrome's root: the browser keeps the focus inside it and closes it on Escape. Built on
- * the first open and kept (closed) afterwards; `destroy()` removes it. The host calls it with the
- * diagram's teardown, since the chrome removes only what it added itself.
+ * The "Keyboard shortcuts…" dialog of the Help group (guide §5.4, §8): one table per group, the
+ * keys as chips like the chrome tooltip's.
  */
-export function createShortcutsDialog(chrome: ShortcutsDialogChrome): ShortcutsDialog {
-  let dialog: HTMLDialogElement | undefined;
-
-  function build(): HTMLDialogElement {
-    const created = element("dialog", DIALOG_CLASS);
-    created.setAttribute("aria-labelledby", TITLE_ID);
-    created.append(dialogContent(chrome, () => created.close()));
-    // A click on the backdrop targets the <dialog> itself; the panel covers all of its own box.
-    created.addEventListener("click", (event) => {
-      if (event.target === created) created.close();
-    });
-    created.addEventListener("close", () => {
-      if (!chrome.menu.trigger.hidden) chrome.menu.trigger.focus({ preventScroll: true });
-    });
-    chrome.root.append(created);
-    return created;
-  }
-
-  return {
-    open() {
-      dialog ??= build();
-      if (!dialog.open) dialog.showModal();
+export function createShortcutsDialog(
+  chrome: ShortcutsDialogChrome,
+  options: ContextMapShortcutOptions = {},
+): ShortcutsDialog {
+  return createChromeDialog(chrome, {
+    className: DIALOG_CLASS,
+    titleId: TITLE_ID,
+    title: "Keyboard shortcuts",
+    content() {
+      const body = element("div", "cm-dialog-body cm-shortcuts-body");
+      body.append(...contextMapShortcuts(chrome, options).map(shortcutTable));
+      return [body];
     },
-    close() {
-      dialog?.close();
-    },
-    isOpen: () => dialog?.open === true,
-    destroy() {
-      dialog?.remove();
-      dialog = undefined;
-    },
-  };
+  });
 }

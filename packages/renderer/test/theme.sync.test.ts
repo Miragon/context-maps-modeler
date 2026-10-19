@@ -127,7 +127,21 @@ describe("theme.sync — context-maps.css", () => {
     const used = [...withoutComments(css).matchAll(/var\((--cd-[\w-]+)/g)].map((m) => m[1]!);
     expect(used.length).toBeGreaterThan(20);
     for (const token of used) {
-      expect(token).toMatch(/^--cd-(ui-[\w-]+|radius-\w+|shadow-\d|ease(-out)?|motion-\w+)$/);
+      expect(token).toMatch(
+        /^--cd-(ui-[\w-]+|radius-\w+|shadow-\d|ease(-out)?|motion-\w+|blau|blau-link|weiss)$/,
+      );
+    }
+  });
+
+  it("fills only the primary dialog button with the fixed palette (guide §8)", () => {
+    const fixed = /var\(--cd-(blau|blau-link|weiss)\)/;
+    const rules = [...withoutComments(css).matchAll(/([^{};]+)\{([^{}]*)\}/g)];
+    const fixedRules = rules.filter((rule) => fixed.test(rule[2]!));
+    expect(fixedRules.length).toBeGreaterThan(0);
+    for (const rule of fixedRules) {
+      for (const selector of rule[1]!.split(",")) {
+        expect(selector.trim()).toMatch(/^\.cm-dialog-button\[data-variant="primary"\]/);
+      }
     }
   });
 

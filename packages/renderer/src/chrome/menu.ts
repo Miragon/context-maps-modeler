@@ -54,7 +54,12 @@ export interface MapExports {
 export interface MapMenuActions {
   readonly exports: MapExports;
   showKeyboardShortcuts(): void;
+  /** Opens the dialog that renames the map; without it the Model group has no title entry. */
+  editTitle?: (() => void) | undefined;
 }
+
+/** The map's native file in the Export group and in the shortcuts dialog. */
+export const JSON_EXPORT_LABEL = "Export as JSON";
 
 function exportEntry(
   id: string,
@@ -72,14 +77,17 @@ function exportEntry(
   };
 }
 
-/** The menu groups of the context map (guide §5.4): Export with PNG first, Help. */
+/** The menu groups of the context map (guide §5.4): Model, Export with PNG first, Help. */
 export function contextMapMenu(actions: MapMenuActions): MapMenu {
+  const { editTitle } = actions;
   return {
-    model: [],
+    model: editTitle
+      ? [{ kind: "dialog", id: "map-title", label: "Map title…", onSelect: () => editTitle() }]
+      : [],
     export: [
       exportEntry("export-png", "Export as PNG", actions.exports.png, "file-image"),
       exportEntry("export-svg", "Export as SVG", actions.exports.svg, "file-code-corner"),
-      exportEntry("export-json", "Export as JSON", actions.exports.json),
+      exportEntry("export-json", JSON_EXPORT_LABEL, actions.exports.json),
       exportEntry("export-cml", "Export as CML", actions.exports.cml),
     ],
     help: [
