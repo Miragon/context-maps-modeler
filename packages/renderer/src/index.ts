@@ -15,6 +15,17 @@ export { Modeler } from "./Modeler.js";
 export { CmBaseViewer } from "./CmBaseViewer.js";
 export type { CmViewerOptions, EventCallback, FreeRectInsets } from "./CmBaseViewer.js";
 
+// The collaborative-modeler contract of @miragon/modeler-api (editor and viewer mounts)
+export {
+  CONTEXT_MAPS_NOTATION,
+  createCollaborativeModeler,
+  createCollaborativeViewer,
+} from "./collaborative/index.js";
+export type {
+  CollaborativeContextMapsModeler,
+  CollaborativeContextMapsOptions,
+} from "./collaborative/index.js";
+
 // Modules (for additionalModules / extension) + their services
 export { cmModelModule, CmElementFactory } from "./model/index.js";
 export { cmDrawModule, ContextMapsRenderer } from "./draw/index.js";
