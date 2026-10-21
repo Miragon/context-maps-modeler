@@ -244,7 +244,7 @@ function idOf(entry: unknown): string | undefined {
   return typeof id === "string" && id !== "" ? id : undefined;
 }
 
-/** The issues by where they sit in the file: by section, then by element (a stable sort). */
+/** The issues in file order, by section and then by element (a stable sort). */
 function inDocumentOrder(issues: ParseIssue[], sections: readonly string[]): ParseIssue[] {
   const section = ({ path }: ParseIssue): number => {
     const index = typeof path[0] === "string" ? sections.indexOf(path[0]) : -1;
