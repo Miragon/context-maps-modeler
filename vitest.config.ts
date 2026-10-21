@@ -57,6 +57,17 @@ export default defineConfig({
           },
         },
       },
+      // Opt-in via `npm run test:vscode`: packs the extension and drives a real VS Code, which
+      // needs a display and downloads VS Code on the first run.
+      {
+        resolve: { alias },
+        test: {
+          name: "vscode",
+          environment: "node",
+          include: ["apps/vscode/test-smoke/**/*.test.ts"],
+          fileParallelism: false,
+        },
+      },
     ],
   },
 });
