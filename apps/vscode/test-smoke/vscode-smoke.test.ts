@@ -11,7 +11,7 @@ import {
 } from "@miragon/context-maps-schema-model";
 import { formatVsCodeSmoke, runVsCodeSmoke } from "@miragon/modeler-shell/testing/vscode-electron";
 import { createVSIX } from "@vscode/vsce";
-import { afterAll, beforeAll, expect, it } from "vitest";
+import { afterAll, beforeAll, expect, it, type TestContext } from "vitest";
 import { WEBVIEW_THEMES } from "../src/themes.js";
 
 const appDirectory = fileURLToPath(new URL("..", import.meta.url));
@@ -22,10 +22,12 @@ const fixtureFile = new URL("fixtures/ordering.cm", import.meta.url);
 /**
  * The save step of the shell's driver (0.3.0) takes the first read of the file that differs from
  * the fixture, which can be the moment VS Code has truncated the file and not yet written it. Only
- * that read is retried, in a fresh VS Code; an extension that really saves an empty map fails
- * every attempt.
+ * that read is retried, in a fresh VS Code. An extension that really saves an empty file fails
+ * every attempt, so the last attempt names the extension instead of the driver.
  */
+const SAVE_RETRIES = 2;
 const SAVE_READ_MID_WRITE = "the driver read the saved file while VS Code was still writing it";
+const SAVED_EMPTY_IN_EVERY_ATTEMPT = `the saved file was empty in all ${SAVE_RETRIES + 1} attempts: the extension most likely saves an empty file`;
 
 let packageDirectory: string | undefined;
 let extensionPath: string;
@@ -67,7 +69,7 @@ afterAll(async () => {
   if (packageDirectory) await rm(packageDirectory, { recursive: true, force: true });
 });
 
-async function openEditSaveUndoAndTheme(): Promise<void> {
+async function openEditSaveUndoAndTheme({ task }: TestContext): Promise<void> {
   const fixtureText = await readFile(fixtureFile, "utf8");
   const fixture = parseMap(fixtureText);
 
@@ -84,7 +86,11 @@ async function openEditSaveUndoAndTheme(): Promise<void> {
   report(formatVsCodeSmoke(result));
 
   expect(result.failures).toEqual([]);
-  expect(result.saved?.text, SAVE_READ_MID_WRITE).not.toBe("");
+  const isLastAttempt = (task.result?.retryCount ?? 0) >= SAVE_RETRIES;
+  expect(
+    result.saved?.text,
+    isLastAttempt ? SAVED_EMPTY_IN_EVERY_ATTEMPT : SAVE_READ_MID_WRITE,
+  ).not.toBe("");
   const saved = result.saved?.parsed as CmDocument | undefined;
   expect(saved?.contexts).toHaveLength(fixture.contexts.length + 1);
   expect(saved?.relationships).toEqual(fixture.relationships);
@@ -93,6 +99,6 @@ async function openEditSaveUndoAndTheme(): Promise<void> {
 
 it(
   "opens, edits, saves, undoes and themes a context map in a real VS Code",
-  { timeout: 600_000, retry: { count: 2, condition: new RegExp(SAVE_READ_MID_WRITE) } },
+  { timeout: 600_000, retry: { count: SAVE_RETRIES, condition: new RegExp(SAVE_READ_MID_WRITE) } },
   openEditSaveUndoAndTheme,
 );

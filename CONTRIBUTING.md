@@ -97,7 +97,10 @@ screenshots uploaded as the artifacts `vscode-smoke-minimum` and `vscode-smoke-s
 
 The shell's driver (0.3.0) can read the saved file at the moment VS Code has truncated it and not
 yet written it; the test then fails with "the driver read the saved file while VS Code was still
-writing it" and retries, up to twice, in a fresh VS Code. No other failure is retried.
+writing it" and retries, up to twice, in a fresh VS Code. No other failure is retried. When the
+saved file is empty in the third attempt as well, the race is not the likely cause: the test fails
+with "the saved file was empty in all 3 attempts: the extension most likely saves an empty file",
+which points at the extension's save path, not at the driver.
 
 ## Design tokens
 
