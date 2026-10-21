@@ -96,12 +96,13 @@ demand (Actions → VS Code smoke → Run workflow, for any branch). Two jobs on
 `engines.vscode` floor and the newest stable VS Code, with the download cached per version and the
 screenshots uploaded as the artifacts `vscode-smoke-minimum` and `vscode-smoke-stable`.
 
-The shell's driver (0.3.0) can read the saved file at the moment VS Code has truncated it and not
-yet written it; the test then fails with "the driver read the saved file while VS Code was still
-writing it" and retries, up to twice, in a fresh VS Code. No other failure is retried. When the
-saved file is empty in the third attempt as well, the race is not the likely cause: the test fails
-with "the saved file was empty in all 3 attempts: the extension most likely saves an empty file",
-which points at the extension's save path, not at the driver.
+The test retries nothing: a failure is a finding, not flakiness to rerun. The shell's driver (0.3.1)
+reads the saved file only after the editor tab has turned clean, which VS Code does once its write
+has resolved, and only when two reads 100 ms apart agree; a text the parser rejects is read again
+until it has stayed the same for 1 s. A broken save therefore fails with what went wrong ("Meta+s
+wrote nothing to disk", "the editor is still dirty after the save", "the saved text does not parse:
+…"; `Control+s` on Linux), and an extension that saves an empty map fails the test's check for one
+more context.
 
 ## Design tokens
 
