@@ -19,6 +19,14 @@ const repositoryRoot = fileURLToPath(new URL("../../..", import.meta.url));
 const screenshotDirectory = join(repositoryRoot, "test-results/vscode-smoke");
 const fixtureFile = new URL("fixtures/ordering.cm", import.meta.url);
 
+/**
+ * The save step of the shell's driver (0.3.0) takes the first read of the file that differs from
+ * the fixture, which can be the moment VS Code has truncated the file and not yet written it. Only
+ * that read is retried, in a fresh VS Code; an extension that really saves an empty map fails
+ * every attempt.
+ */
+const SAVE_READ_MID_WRITE = "the driver read the saved file while VS Code was still writing it";
+
 let packageDirectory: string | undefined;
 let extensionPath: string;
 
@@ -59,7 +67,7 @@ afterAll(async () => {
   if (packageDirectory) await rm(packageDirectory, { recursive: true, force: true });
 });
 
-it("opens, edits, saves, undoes and themes a context map in a real VS Code", async () => {
+async function openEditSaveUndoAndTheme(): Promise<void> {
   const fixtureText = await readFile(fixtureFile, "utf8");
   const fixture = parseMap(fixtureText);
 
@@ -76,8 +84,15 @@ it("opens, edits, saves, undoes and themes a context map in a real VS Code", asy
   report(formatVsCodeSmoke(result));
 
   expect(result.failures).toEqual([]);
+  expect(result.saved?.text, SAVE_READ_MID_WRITE).not.toBe("");
   const saved = result.saved?.parsed as CmDocument | undefined;
   expect(saved?.contexts).toHaveLength(fixture.contexts.length + 1);
   expect(saved?.relationships).toEqual(fixture.relationships);
   expect(result.saved?.text).toBe(saved && serializeDocumentText(saved));
-}, 600_000);
+}
+
+it(
+  "opens, edits, saves, undoes and themes a context map in a real VS Code",
+  { timeout: 600_000, retry: { count: 2, condition: new RegExp(SAVE_READ_MID_WRITE) } },
+  openEditSaveUndoAndTheme,
+);
