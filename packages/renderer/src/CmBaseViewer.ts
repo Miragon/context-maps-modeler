@@ -139,8 +139,8 @@ export abstract class CmBaseViewer {
     const importer = diagram.get<CmImporter>("cmImporter");
     importer.assertImportable(doc);
     const labelEditing = this._optional<CmLabelEditing>("cmLabelEditing");
-    // An edit in progress belongs to an element the import is about to replace: a commit (the
-    // fit below changes the viewbox, which commits) would land on a removed shape.
+    // An edit in progress belongs to an element the import is about to replace: a commit after it
+    // (Enter, blur) would land on a removed shape.
     labelEditing?.suspend();
     this._optional<ContextPadPrompt>("cmContextPadProvider")?.cancelPrompt();
     this._optional<PopupMenu>("popupMenu")?.close();

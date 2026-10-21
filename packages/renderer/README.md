@@ -100,9 +100,15 @@ new Modeler({
 An import is **silent**: the previous document's undo history goes without a
 `commandStack.changed`, so a host that saves on every change never writes an import back. It
 **rejects without a trace**: a document with a duplicate id, an id of the engine's roots or the
-name of a built-in object property as an id throws before anything is removed. It is **lossless**: keys the model does not know and relationships whose
-ends are not on the map come back on export. A label edit open during an import is taken down and
-reopened on the element with the same id, with the typed text.
+name of a built-in object property as an id throws before anything is removed. It is **lossless**:
+keys the model does not know and relationships whose ends are not on the map come back on export. A
+label edit open during an import is taken down and reopened on the element with the same id, with
+the typed text.
+
+A **view change never commits** an open label edit or description prompt: a pan or zoom, the user's
+or the host's (`canvas.viewbox(…)`, `setViewState`, a fit), keeps it open with the typed text and
+moves it with its element or pad entry. Only the user's own gestures commit it: Enter, leaving the
+field, or starting a drag.
 
 ### Modeler-only
 
