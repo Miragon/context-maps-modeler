@@ -90,8 +90,9 @@ afterwards for a debug build. The VSIX is unpacked with `unzip` (macOS and Ubunt
 
 **Linux and CI.** VS Code needs an X server: `xvfb-run -a npm run test:vscode`. CI runs it in
 [`.github/workflows/vscode-smoke.yml`](.github/workflows/vscode-smoke.yml), apart from `ci.yml` and
-not a required check: on pull requests that touch `apps/vscode/**`, every Monday, and on demand
-(Actions → VS Code smoke → Run workflow, for any branch). Two jobs on `ubuntu-latest`, the
+not a required check: on pull requests that touch `apps/vscode/**` or the test's wiring (the root
+`package.json` and `vitest.config.ts`, the setup action, the workflow itself), every Monday, and on
+demand (Actions → VS Code smoke → Run workflow, for any branch). Two jobs on `ubuntu-latest`, the
 `engines.vscode` floor and the newest stable VS Code, with the download cached per version and the
 screenshots uploaded as the artifacts `vscode-smoke-minimum` and `vscode-smoke-stable`.
 
