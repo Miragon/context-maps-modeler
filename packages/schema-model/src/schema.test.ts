@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isReservedId, parseDocument, reservedIdProblem, validateDocument } from "./schema";
+import {
+  isReservedId,
+  parseDocument,
+  parseDocumentText,
+  reservedIdProblem,
+  validateDocument,
+} from "./schema";
 import { SAMPLE_DOCUMENT } from "./sample";
 import { emptyDocument } from "./factory";
 import type { CmDocument, Relationship } from "./types";
@@ -136,6 +142,26 @@ describe("parseDocument", () => {
         "relationships.0.pattern",
         "relationships.1.id",
       ]);
+    }
+  });
+
+  it("follows the file's order when its relationships come before its contexts", () => {
+    const { version, title, contexts, relationships } = structuredClone(SAMPLE_DOCUMENT);
+    contexts[0]!.id = relationships[0]!.id;
+    contexts[2]!.position.x = Number.NaN;
+    relationships[1]!.pattern = "bogus" as Relationship["pattern"];
+    const text = JSON.stringify({ version, title, relationships, contexts });
+    const result = parseDocumentText(text);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues?.map((issue) => issue.path.join("."))).toEqual([
+        "relationships.1.pattern",
+        "contexts.0.id",
+        "contexts.2.position.x",
+      ]);
+      expect(result.issues?.[1]?.message).toBe(
+        `duplicate id "${relationships[0]!.id}"; ids must be unique across contexts and relationships`,
+      );
     }
   });
 

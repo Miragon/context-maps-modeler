@@ -167,7 +167,11 @@ export function parseDocument(input: unknown): ParseResult {
       }));
   // Checked next to the shape, not after it: a fix of the shape would otherwise bring up the
   // repeat as a new error, one round later.
-  const issues = inDocumentOrder([...shapeIssues, ...repeatedIdIssues(migrated)]);
+  const sections = sectionsInFileOrder(migrated);
+  const issues = inDocumentOrder(
+    [...shapeIssues, ...repeatedIdIssues(migrated, sections)],
+    sections,
+  );
   if (!result.success || issues.length > 0) return failure(issues);
   return {
     ok: true,
@@ -197,16 +201,26 @@ export function parseDocumentText(text: string): ParseResult {
 }
 
 /**
- * Each id that a context or relationship before it already uses, at the path of the repeat. The
- * canvas keeps one element per id, so such a file cannot be drawn. Read from the raw input, so a
- * repeat is found while other values are still invalid; ids that are no non-empty string or
- * reserved carry an issue of their own.
+ * The top-level keys in the order the file writes them. A hand-written file may list its
+ * relationships before its contexts; "before" and "document order" then follow the file, so an
+ * editor marks the copy the author wrote second.
  */
-function repeatedIdIssues(input: unknown): ParseIssue[] {
+function sectionsInFileOrder(input: unknown): readonly string[] {
+  return input !== null && typeof input === "object" ? Object.keys(input) : [];
+}
+
+/**
+ * Each id that a context or relationship written before it already uses, at the path of the
+ * repeat. The canvas keeps one element per id, so such a file cannot be drawn. Read from the raw
+ * input, so a repeat is found while other values are still invalid; ids that are no non-empty
+ * string or reserved carry an issue of their own.
+ */
+function repeatedIdIssues(input: unknown, sections: readonly string[]): ParseIssue[] {
   if (input == null || typeof input !== "object") return [];
   const seen = new Set<string>();
   const issues: ParseIssue[] = [];
-  for (const list of ["contexts", "relationships"] as const) {
+  const lists = sections.filter((key) => key === "contexts" || key === "relationships");
+  for (const list of lists) {
     const entries = (input as Record<string, unknown>)[list];
     if (!Array.isArray(entries)) continue;
     entries.forEach((entry: unknown, index) => {
@@ -230,13 +244,11 @@ function idOf(entry: unknown): string | undefined {
   return typeof id === "string" && id !== "" ? id : undefined;
 }
 
-const SECTION_ORDER: readonly unknown[] = ["version", "title", "contexts", "relationships"];
-
 /** The issues by where they sit in the file: by section, then by element (a stable sort). */
-function inDocumentOrder(issues: ParseIssue[]): ParseIssue[] {
+function inDocumentOrder(issues: ParseIssue[], sections: readonly string[]): ParseIssue[] {
   const section = ({ path }: ParseIssue): number => {
-    const index = SECTION_ORDER.indexOf(path[0]);
-    return index === -1 ? SECTION_ORDER.length : index;
+    const index = typeof path[0] === "string" ? sections.indexOf(path[0]) : -1;
+    return index === -1 ? sections.length : index;
   };
   const element = ({ path }: ParseIssue): number => (typeof path[1] === "number" ? path[1] : -1);
   return issues.sort((a, b) => section(a) - section(b) || element(a) - element(b));

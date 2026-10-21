@@ -181,9 +181,10 @@ console.log(SAMPLE_DOCUMENT.title);
   itself (`cm-root`, `__implicitroot…`), the name of a built-in object property (`constructor`,
   `toString`, `__proto__`, …; `isReservedId()` and `reservedIdProblem()` name both), and an id an
   earlier context or relationship already uses. Each issue carries the path of the offending value
-  (`["contexts", 2, "id"]` for a repeated id: the repeat, not the first use). Repeated ids are
-  reported in the same round as every other issue, in document order, so fixing the others never
-  brings up a repeat as a new error.
+  (`["contexts", 2, "id"]` for a repeated id: the repeat, not the first use). "Earlier" follows the
+  file, so a hand-written file that lists its relationships first gets the repeat on the copy it
+  writes second. Repeated ids are reported in the same round as every other issue, in document
+  order, so fixing the others never brings up a repeat as a new error.
 
 ## Development
 

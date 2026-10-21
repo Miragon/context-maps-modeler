@@ -87,4 +87,18 @@ describe("mapProblems", () => {
     expect(problems[1]!.start).toBe(copy);
     expect(textOf(text, problems[1]!)).toBe('"id": "ctx_auth"');
   });
+
+  it("puts a duplicate id on the later copy when the relationships come first", () => {
+    const { version, title, contexts, relationships } = structuredClone(SAMPLE_DOCUMENT);
+    const repeated = relationships[0]!.id;
+    contexts[0]!.id = repeated;
+    const text = JSON.stringify({ version, title, relationships, contexts }, null, 2);
+    const problems = mapProblems(text);
+    expect(problems.map((problem) => problem.message)).toEqual([
+      `contexts.0.id: duplicate id "${repeated}"; ids must be unique across contexts and relationships`,
+    ]);
+    const copy = text.lastIndexOf(`"id": "${repeated}"`);
+    expect(copy).toBeGreaterThan(text.indexOf(`"id": "${repeated}"`));
+    expect(problems[0]!.start).toBe(copy);
+  });
 });
