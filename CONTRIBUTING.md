@@ -98,6 +98,14 @@ container's (`/work/…`). The container packs its own copy, so your `apps/vscod
 is. `npm run test:vscode:docker -- --help` lists the options;
 `docker volume rm modeler-shell-vscode-cache modeler-shell-npm-cache` starts over.
 
+With shell 0.3.1 on Docker Desktop, copying the results back sometimes fails after the test:
+`cp: cannot create regular file '/results/…'` follows "the command exited with code 0", the
+screenshots are gone and the command exits with 1. The test passed then; run it again for the
+screenshots. The command deletes and recreates `test-results/vscode-smoke/` right before it mounts
+the directory, and Docker Desktop sometimes mounts the deleted one. A failing test can lose its
+screenshots and VS Code's logs the same way; its own output above the `cp` lines still says what
+failed.
+
 **With a window: macOS.** `npm run test:vscode` runs the same test directly on the host, for when
 you want to watch VS Code:
 

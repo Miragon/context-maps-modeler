@@ -70,7 +70,9 @@ applies to everything else (chrome, typography, selection, neutrals, the app ico
   (needs a display, downloads VS Code once); CI runs it in `vscode-smoke.yml` under `xvfb-run -a`,
   not in `ci.yml`. Locally run `npm run test:vscode:docker` (the shell's
   `modeler-shell-vscode-docker`: the same test in a Linux container, no window, no focus taken);
-  `npm run test:vscode` opens a real VS Code window on macOS.
+  `npm run test:vscode` opens a real VS Code window on macOS. With shell 0.3.1 on Docker Desktop,
+  `cp: cannot create regular file '/results/…'` after "the command exited with code 0" is the
+  shell's results copy, not the test: the test passed, run it again for the screenshots.
 
 ## Monorepo (npm workspaces)
 
