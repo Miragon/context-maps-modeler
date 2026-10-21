@@ -2,10 +2,11 @@ import { defineConfig } from "vitest/config";
 import { playwright } from "@vitest/browser-playwright";
 import { fileURLToPath, URL } from "node:url";
 
-// The packages are consumed from SOURCE (mirrors the tsconfig paths / app aliases) so neither
-// project needs a prior build. Two projects so the default `npm test` stays fast and DOM-light,
-// while the renderer browser-integration layer runs opt-in in real Chromium via `npm run test:browser`
-// (jsdom can't provide SVGElement.getBBox() / getComputedTextLength(), which the renderer relies on).
+// The packages are consumed from SOURCE (mirrors the tsconfig paths / app aliases) so no project
+// needs a prior build. Three projects: `unit` keeps the default `npm test` fast and DOM-light; the
+// renderer browser-integration layer runs opt-in in real Chromium via `npm run test:browser` (jsdom
+// can't provide SVGElement.getBBox() / getComputedTextLength(), which the renderer relies on); and
+// the packaged extension runs opt-in in a real VS Code via `npm run test:vscode`.
 const alias = {
   "@miragon/context-maps-renderer": fileURLToPath(
     new URL("./packages/renderer/src/index.ts", import.meta.url),
