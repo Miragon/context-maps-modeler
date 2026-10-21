@@ -64,9 +64,27 @@ describe("mapProblems", () => {
     expect(textOf(text, problems[0]!)).toBe('"id": "cm-root"');
   });
 
-  it("puts a duplicate id on its copy", () => {
-    const text = sample.replace('"id": "ctx_cfp"', '"id": "ctx_auth"');
-    const duplicate = mapProblems(text).find((problem) => problem.rule === "unique-ids");
-    expect(textOf(text, duplicate!)).toContain('"label": "CfP Management"');
+  it("names an id that names a built-in object property at that id", () => {
+    const text = sample.replace('"id": "rel_evaluation_schedule"', '"id": "constructor"');
+    const problems = mapProblems(text);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]!.message).toMatch(
+      /^relationships\.\d+\.id: the id "constructor" is reserved: it names a built-in property/,
+    );
+    expect(textOf(text, problems[0]!)).toBe('"id": "constructor"');
+  });
+
+  it("puts a duplicate id on its copy, next to the other structural errors", () => {
+    const text = sample
+      .replace('"id": "ctx_cfp"', '"id": "ctx_auth"')
+      .replace('"x": 340', '"x": "left"');
+    const problems = mapProblems(text);
+    expect(problems.map((problem) => problem.message)).toEqual([
+      expect.stringMatching(/^contexts\.1\.position\.x: /),
+      expect.stringMatching(/^contexts\.1\.id: duplicate id "ctx_auth"/),
+    ]);
+    const copy = text.indexOf('"id": "ctx_auth"', text.indexOf('"id": "ctx_auth"') + 1);
+    expect(problems[1]!.start).toBe(copy);
+    expect(textOf(text, problems[1]!)).toBe('"id": "ctx_auth"');
   });
 });

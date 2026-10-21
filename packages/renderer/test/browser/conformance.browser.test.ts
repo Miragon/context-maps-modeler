@@ -92,6 +92,7 @@ const harness: ConformanceHarness = {
     '{ "version": 2, "title": "From the future", "contexts": [], "relationships": [] }',
     typedHalfway('"id": "ctx_cfp"', '"id": "ctx_auth"'),
     typedHalfway('"id": "ctx_cfp"', '"id": "cm-root"'),
+    typedHalfway('"id": "ctx_cfp"', '"id": "constructor"'),
     typedHalfway('"x": 340', '"x": 1e38'),
     typedHalfway('"pattern": "shared-kernel"', '"pattern": "shared'),
   ],

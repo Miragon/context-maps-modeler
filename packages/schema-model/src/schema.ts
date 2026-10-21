@@ -34,19 +34,32 @@ export const MAX_COORDINATE = 1_000_000;
 export const DIAGRAM_ROOT_ID = "cm-root";
 
 /**
- * Whether `id` is one the canvas gives its own root elements: the map's root and the implicit
- * roots diagram-js creates. The canvas keeps one element per id, so a context or relationship
- * with such an id could not be drawn, and the file is rejected with the id as the reason.
+ * Why `id` cannot name a context or relationship, or `undefined` when it can. The canvas keeps one
+ * element per id in a plain object: the ids of its own roots (the map's root and the implicit roots
+ * diagram-js creates) are taken, and the name of a built-in object property (`constructor`,
+ * `toString`, `__proto__`, …) already resolves there. Either makes the import fail, so the file is
+ * rejected with the id as the reason.
  */
+export function reservedIdProblem(id: string): string | undefined {
+  if (id === DIAGRAM_ROOT_ID || id.startsWith("__implicitroot")) {
+    return `the id "${id}" is reserved for the diagram itself`;
+  }
+  if (Object.hasOwn(Object.prototype, id)) {
+    return `the id "${id}" is reserved: it names a built-in property of JavaScript objects`;
+  }
+  return undefined;
+}
+
+/** Whether `id` cannot name a context or relationship (see {@link reservedIdProblem}). */
 export function isReservedId(id: string): boolean {
-  return id === DIAGRAM_ROOT_ID || id.startsWith("__implicitroot");
+  return reservedIdProblem(id) !== undefined;
 }
 
 const elementIdSchema = z
   .string()
   .min(1)
   .refine((id) => !isReservedId(id), {
-    error: (issue) => `the id "${String(issue.input)}" is reserved for the diagram itself`,
+    error: (issue) => reservedIdProblem(String(issue.input)),
   });
 
 const subdomainTypeSchema = z.enum(SUBDOMAIN_TYPES as unknown as [string, ...string[]]);
@@ -144,16 +157,18 @@ export function parseDocument(input: unknown): ParseResult {
   }
   const migrated = migrate(input);
   const result = documentSchema.safeParse(migrated);
-  if (!result.success) {
-    return failure(
-      result.error.issues.map((issue) => ({
+  const shapeIssues: ParseIssue[] = result.success
+    ? []
+    : result.error.issues.map((issue) => ({
         path: issue.path.filter(
           (segment): segment is string | number => typeof segment !== "symbol",
         ),
         message: issue.message,
-      })),
-    );
-  }
+      }));
+  // Checked next to the shape, not after it: a fix of the shape would otherwise bring up the
+  // repeat as a new error, one round later.
+  const issues = inDocumentOrder([...shapeIssues, ...repeatedIdIssues(migrated)]);
+  if (!result.success || issues.length > 0) return failure(issues);
   return {
     ok: true,
     document: keepForeignFields(result.data as CmDocument, migrated as Record<string, unknown>),
@@ -179,6 +194,52 @@ export function parseDocumentText(text: string): ParseResult {
     ]);
   }
   return parseDocument(value);
+}
+
+/**
+ * Each id that a context or relationship before it already uses, at the path of the repeat. The
+ * canvas keeps one element per id, so such a file cannot be drawn. Read from the raw input, so a
+ * repeat is found while other values are still invalid; ids that are no non-empty string or
+ * reserved carry an issue of their own.
+ */
+function repeatedIdIssues(input: unknown): ParseIssue[] {
+  if (input == null || typeof input !== "object") return [];
+  const seen = new Set<string>();
+  const issues: ParseIssue[] = [];
+  for (const list of ["contexts", "relationships"] as const) {
+    const entries = (input as Record<string, unknown>)[list];
+    if (!Array.isArray(entries)) continue;
+    entries.forEach((entry: unknown, index) => {
+      const id = idOf(entry);
+      if (id === undefined || isReservedId(id)) return;
+      if (seen.has(id)) {
+        issues.push({
+          path: [list, index, "id"],
+          message: `duplicate id "${id}"; ids must be unique across contexts and relationships`,
+        });
+      }
+      seen.add(id);
+    });
+  }
+  return issues;
+}
+
+function idOf(entry: unknown): string | undefined {
+  if (entry === null || typeof entry !== "object") return undefined;
+  const { id } = entry as { id?: unknown };
+  return typeof id === "string" && id !== "" ? id : undefined;
+}
+
+const SECTION_ORDER: readonly unknown[] = ["version", "title", "contexts", "relationships"];
+
+/** The issues by where they sit in the file: by section, then by element (a stable sort). */
+function inDocumentOrder(issues: ParseIssue[]): ParseIssue[] {
+  const section = ({ path }: ParseIssue): number => {
+    const index = SECTION_ORDER.indexOf(path[0]);
+    return index === -1 ? SECTION_ORDER.length : index;
+  };
+  const element = ({ path }: ParseIssue): number => (typeof path[1] === "number" ? path[1] : -1);
+  return issues.sort((a, b) => section(a) - section(b) || element(a) - element(b));
 }
 
 /**
