@@ -110,6 +110,18 @@ test("freeArea.center places a keyboard-created context at that diagram point", 
   }
 });
 
+test("given only freeArea.center, the fit after an import is the fit without the option", () => {
+  const centreOnly = mountModeler({ freeArea: { center: () => ({ x: 1234, y: 567 }) } });
+  const withoutOption = mountModeler();
+  try {
+    const viewboxOf = (modeler: Modeler) => modeler.get<CanvasLike>("canvas").viewbox();
+    expect(viewboxOf(centreOnly)).toEqual(viewboxOf(withoutOption));
+  } finally {
+    centreOnly.destroy();
+    withoutOption.destroy();
+  }
+});
+
 test("fitOnImport: false leaves the view to the host; the default fits every import", () => {
   const view = { x: -500, y: -400, width: 450, height: 320 };
   const fitted = mountModeler();
