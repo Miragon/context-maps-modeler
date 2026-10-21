@@ -75,11 +75,21 @@ async function openEditSaveUndoAndTheme(): Promise<void> {
   });
   report(formatVsCodeSmoke(result));
 
-  expect(result.failures).toEqual([]);
+  // Soft, so a failure of another step (a theme, say) cannot hide what is wrong with the save.
+  expect.soft(result.failures).toEqual([]);
+  expect(result.saved, "the driver read no saved file").toBeDefined();
+  expect(result.saved?.text, "the extension saved an empty file").not.toBe("");
   const saved = result.saved?.parsed as CmDocument | undefined;
-  expect(saved?.contexts).toHaveLength(fixture.contexts.length + 1);
-  expect(saved?.relationships).toEqual(fixture.relationships);
-  expect(result.saved?.text).toBe(saved && serializeDocumentText(saved));
+  expect(
+    saved?.contexts,
+    "the saved map should hold one context more than the fixture",
+  ).toHaveLength(fixture.contexts.length + 1);
+  expect(saved?.relationships, "the save should keep the fixture's relationships").toEqual(
+    fixture.relationships,
+  );
+  expect(result.saved?.text, "the saved text should be canonical").toBe(
+    saved && serializeDocumentText(saved),
+  );
 }
 
 it(

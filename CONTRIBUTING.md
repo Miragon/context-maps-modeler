@@ -125,13 +125,14 @@ screenshots uploaded as the artifacts `vscode-smoke-minimum` and `vscode-smoke-s
 and run `npm ci` a second time in every job, with VS Code's download in a Docker volume that the
 workflow's cache step cannot keep.
 
-The test retries nothing: a failure is a finding, not flakiness to rerun. The shell's driver (0.3.1)
-reads the saved file only after the editor tab has turned clean, which VS Code does once its write
-has resolved, and only when two reads 100 ms apart agree; a text the parser rejects is read again
-until it has stayed the same for 1 s. A broken save therefore fails with what went wrong ("Meta+s
-wrote nothing to disk", "the editor is still dirty after the save", "the saved text does not parse:
-…"; `Control+s` on Linux), and an extension that saves an empty map fails the test's check for one
-more context.
+The test retries nothing. The shell's driver (0.3.1) reads the saved file only after the editor tab
+has turned clean, which VS Code does once its write has resolved, and only when two reads 100 ms
+apart agree; a text the parser rejects is read again until it has stayed the same for 1 s. A broken
+save therefore fails with what went wrong ("Meta+s wrote nothing to disk", "the editor is still
+dirty after the save", "the saved text does not parse: …"; `Control+s` on Linux), and an extension
+that saves an empty file fails with "the extension saved an empty file". The driver's failures are a
+soft assertion: the test's own checks of the saved map run after them, so a failure in another
+step, such as a theme that never switched, cannot hide a broken save.
 
 ## Design tokens
 

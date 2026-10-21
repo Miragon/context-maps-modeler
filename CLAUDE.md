@@ -65,10 +65,12 @@ applies to everything else (chrome, typography, selection, neutrals, the app ico
   `runVsCodeSmoke` on it: open, the default palette edit, save (`parseDocumentText`, one more
   context, canonical text), undo and VS Code's four default themes, screenshots in
   `test-results/vscode-smoke/`. No retry: the driver (0.3.1) reads the save only once the tab is
-  clean and the file holds still, so every failure is real. Opt-in (needs a display, downloads VS
-  Code once); CI runs it in `vscode-smoke.yml` under `xvfb-run -a`, not in `ci.yml`. Locally run
-  `npm run test:vscode:docker` (the shell's `modeler-shell-vscode-docker`: the same test in a Linux
-  container, no window, no focus taken); `npm run test:vscode` opens a real VS Code window on macOS.
+  clean and the file holds still, so a failed save check is the extension's, not a race; the
+  driver's failures are a soft assertion, so another step's failure cannot hide the save's. Opt-in
+  (needs a display, downloads VS Code once); CI runs it in `vscode-smoke.yml` under `xvfb-run -a`,
+  not in `ci.yml`. Locally run `npm run test:vscode:docker` (the shell's
+  `modeler-shell-vscode-docker`: the same test in a Linux container, no window, no focus taken);
+  `npm run test:vscode` opens a real VS Code window on macOS.
 
 ## Monorepo (npm workspaces)
 
