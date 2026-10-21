@@ -75,9 +75,7 @@ context and be canonical JSON. Then it undoes (canvas and file are the fixture a
 through VS Code's four default themes, with one screenshot per theme in `test-results/vscode-smoke/`
 (gitignored). A run takes about 5 s once VS Code is downloaded.
 
-No build first in either way below: the test packs the extension itself. Packing rebuilds
-`apps/vscode/dist` in production mode, so run `npm run build:vscode` (or `npm run dev:vscode`)
-afterwards for a debug build.
+No build first in either way below: the test packs the extension itself.
 
 **Locally, without a window: Docker.** The way to run the smoke test on your machine:
 
@@ -95,8 +93,9 @@ emptied first. The first run builds the image `modeler-shell-vscode-smoke:node<v
 (about 0.9 GB, on the Node version that runs the command) and downloads VS Code into the Docker volume
 `modeler-shell-vscode-cache`; the image, that volume and npm's cache volume `modeler-shell-npm-cache`
 are shared by every Miragon modeler on the machine, so let a first download finish before starting a
-second run. After that a run takes 10 to 15 s, `npm ci` included. Paths in the test's output are the
-container's (`/work/…`). `npm run test:vscode:docker -- --help` lists the options;
+second run. After that a run takes 8 to 15 s, `npm ci` included. Paths in the test's output are the
+container's (`/work/…`). The container packs its own copy, so your `apps/vscode/dist` stays as it
+is. `npm run test:vscode:docker -- --help` lists the options;
 `docker volume rm modeler-shell-vscode-cache modeler-shell-npm-cache` starts over.
 
 **With a window: macOS.** `npm run test:vscode` runs the same test directly on the host, for when
@@ -110,8 +109,9 @@ VSCODE_SMOKE_VERSION=1.96.0 npm run test:vscode  # another version, here the eng
 A VS Code window opens for a few seconds and takes the focus (Electron has no headless mode on
 macOS). The first run downloads VS Code (320 to 360 MB, 0.9 GB unpacked) into
 `~/Library/Caches/miragon-modeler-shell/vscode-test`, which every Miragon modeler on the machine
-shares; let one download finish before starting a second run. The VSIX is unpacked with `unzip`
-(macOS and Ubuntu have it).
+shares; let one download finish before starting a second run. Packing in your checkout rebuilds
+`apps/vscode/dist` in production mode, so run `npm run build:vscode` (or `npm run dev:vscode`)
+afterwards for a debug build. The VSIX is unpacked with `unzip` (macOS and Ubuntu have it).
 
 **Linux and CI.** VS Code needs an X server: `xvfb-run -a npm run test:vscode`. CI runs it in
 [`.github/workflows/vscode-smoke.yml`](.github/workflows/vscode-smoke.yml), apart from `ci.yml` and
