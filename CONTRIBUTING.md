@@ -152,8 +152,9 @@ step, such as a theme that never switched, cannot hide a broken save.
 ## CI and the merge gate
 
 [`ci.yml`](.github/workflows/ci.yml) runs on every pull request, on pushes to `main`, in the merge
-queue and on demand. Its last job, **`ci-ok`, is the merge gate**: together with the pull request
-title check it is the check the `main` ruleset requires, and Dependabot's auto-merge waits for it.
+queue and on demand. Its last job, **`ci-ok`, is the merge gate**: with the pull request title check
+(`validate-pr-title`) it is meant to be the only check the `main` ruleset requires, in place of the
+single jobs, so that Dependabot's auto-merge waits for every job of `ci.yml`.
 `ci-ok` runs after every other job of `ci.yml`, whatever their results, and fails, with one error
 per job, when one of them failed, was cancelled or was skipped. A skip counts as a failure because
 GitHub counts a skipped required check as passed, and `e2e` and `test-browser` are skipped whenever
