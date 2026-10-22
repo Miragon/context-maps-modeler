@@ -70,7 +70,7 @@ async function openEditSaveUndoAndTheme(): Promise<void> {
     themes: WEBVIEW_THEMES,
     name: "context-maps",
     screenshotDir: screenshotDirectory,
-    vscodeVersion: process.env.VSCODE_SMOKE_VERSION || undefined,
+    vscodeVersion: process.env.VSCODE_VERSION || undefined,
     log: (line) => report(`[vscode-smoke] ${line}`),
   });
   report(formatVsCodeSmoke(result));

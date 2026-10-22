@@ -1,32 +1,70 @@
-# The packaged extension in a real VS Code (npm run test:vscode). Kept out of ci.yml and out of
-# the required checks: it downloads VS Code and drives a desktop app, so a pull request never
-# waits for it. It runs on pull requests that change the extension or the test's wiring, weekly
-# to catch a new VS Code release, and on demand (Actions → VS Code smoke → Run workflow, on any
-# branch).
+# The packaged extension in a real VS Code (npm run test:vscode). ci.yml calls it as the job
+# vscode-smoke, so its result is part of the ci-ok gate; vscode-smoke-weekly.yml calls it every
+# Monday to catch a new VS Code release. It downloads VS Code and drives a desktop app, so on a pull
+# request, a push and in the merge queue it runs only when a file the packed extension or the test
+# depends on changed; the job `changes` decides. Run it by hand under Actions → VS Code smoke → Run
+# workflow, on any branch.
 name: VS Code smoke
 
 on:
-  pull_request:
-    paths:
-      - "apps/vscode/**"
-      - "vitest.config.ts"
-      - "package.json"
-      - ".github/actions/setup/**"
-      - ".github/workflows/vscode-smoke.yml"
-  schedule:
-    - cron: "23 4 * * 1"
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: vscode-smoke-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
+  changes:
+    name: Decide whether the smoke test runs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PULL_REQUEST_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+          # What the packed extension is built from (the extension, the packages it bundles, every
+          # manifest and the lockfile) and what runs the test (the Vitest config, the setup action
+          # and the workflows that call it).
+          RELEVANT_PATHS: ^(package-lock\.json|(.*/)?package\.json|apps/vscode/.*|packages/.*|vitest\.config\.ts|\.github/actions/setup/.*|\.github/workflows/(ci|vscode-smoke|vscode-smoke-weekly)\.yml)$
+        run: |
+          decide() {
+            echo "run=$1" >> "$GITHUB_OUTPUT"
+            echo "$2"
+          }
+          case "$EVENT_NAME" in
+            pull_request) base=$PULL_REQUEST_BASE ;;
+            push) base=$PUSH_BEFORE ;;
+            merge_group) base=$MERGE_GROUP_BASE ;;
+            *)
+              decide true "$EVENT_NAME always runs the smoke test"
+              exit 0
+              ;;
+          esac
+          if [ -z "${base//0/}" ]; then
+            decide true "No base commit to compare with ('$base'), so the smoke test runs"
+            exit 0
+          fi
+          if ! git fetch --no-tags --depth=1 origin "$base" || ! changed=$(git diff --name-only "$base" HEAD); then
+            decide true "Cannot compare with the base commit $base, so the smoke test runs"
+            exit 0
+          fi
+          relevant=$(grep -E "$RELEVANT_PATHS" <<< "$changed" || true)
+          if [ -n "$relevant" ]; then
+            decide true "Changed since $base, so the smoke test runs:"$'\n'"$relevant"
+          else
+            decide false "Nothing the smoke test depends on changed since $base"
+          fi
+
   vscode-smoke:
     name: VS Code ${{ matrix.vscode }}
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -43,7 +81,7 @@ jobs:
           TRACK: ${{ matrix.vscode }}
         run: |
           if [ "$TRACK" = "minimum" ]; then
-            version=$(node -p "require('./apps/vscode/package.json').engines.vscode.replace(/^\^/, '')")
+            version=$(node -p "require('semver').minVersion(require('./apps/vscode/package.json').engines.vscode).version")
           else
             version=$(curl -fsSL https://update.code.visualstudio.com/api/releases/stable | jq -r '.[0]')
           fi
@@ -57,10 +95,21 @@ jobs:
           key: vscode-${{ runner.os }}-${{ runner.arch }}-${{ steps.vscode.outputs.version }}
       - run: xvfb-run -a npm run test:vscode
         env:
-          VSCODE_SMOKE_VERSION: ${{ steps.vscode.outputs.version }}
+          VSCODE_VERSION: ${{ steps.vscode.outputs.version }}
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: vscode-smoke-${{ matrix.vscode }}
           path: test-results/vscode-smoke/
           retention-days: 7
+
+  # With the matrix skipped the called workflow still has to end in a success: ci-ok fails on a
+  # skipped vscode-smoke, since a skip looks the same as a smoke test that never got to run.
+  not-needed:
+    name: VS Code smoke not needed
+    needs: changes
+    if: needs.changes.outputs.run == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: echo "::notice title=VS Code smoke::Nothing the smoke test depends on changed, so it did not run."

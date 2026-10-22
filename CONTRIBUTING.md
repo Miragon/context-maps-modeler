@@ -86,8 +86,8 @@ No build first in either way below: the test packs the extension itself.
 **Locally, without a window: Docker.** The way to run the smoke test on your machine:
 
 ```bash
-npm run test:vscode:docker                                       # the newest stable VS Code
-npm run test:vscode:docker -- --env VSCODE_SMOKE_VERSION=1.96.0  # here the engines.vscode floor
+npm run test:vscode:docker                                 # the newest stable VS Code
+npm run test:vscode:docker -- --env VSCODE_VERSION=1.96.0  # here the engines.vscode floor
 ```
 
 `test:vscode:docker` is the shell's command `modeler-shell-vscode-docker`: it runs
@@ -108,8 +108,8 @@ is. `npm run test:vscode:docker -- --help` lists the options;
 you want to watch VS Code:
 
 ```bash
-npm run test:vscode                              # the newest stable VS Code
-VSCODE_SMOKE_VERSION=1.96.0 npm run test:vscode  # another version, here the engines.vscode floor
+npm run test:vscode                        # the newest stable VS Code
+VSCODE_VERSION=1.96.0 npm run test:vscode  # another version, here the engines.vscode floor
 ```
 
 A VS Code window opens for a few seconds and takes the focus (Electron has no headless mode on
@@ -119,17 +119,20 @@ shares; let one download finish before starting a second run. Packing in your ch
 `apps/vscode/dist` in production mode, so run `npm run build:vscode` (or `npm run dev:vscode`)
 afterwards for a debug build. The VSIX is unpacked with `unzip` (macOS and Ubuntu have it).
 
-**Linux and CI.** VS Code needs an X server: `xvfb-run -a npm run test:vscode`. CI runs it in
-[`.github/workflows/vscode-smoke.yml`](.github/workflows/vscode-smoke.yml), apart from `ci.yml` and
-not a required check: on pull requests that touch `apps/vscode/**` or the test's wiring (the root
-`package.json` and `vitest.config.ts`, the setup action, the workflow itself), every Monday, and on
-demand (Actions → VS Code smoke → Run workflow, for any branch). Two jobs on `ubuntu-latest`, the
-`engines.vscode` floor and the newest stable VS Code, with the download cached per version and the
-screenshots uploaded as the artifacts `vscode-smoke-minimum` and `vscode-smoke-stable`. CI stays on
-`xvfb-run` rather than the Docker command: a runner has no desktop whose focus a window could take,
-`ubuntu-latest` already has VS Code's libraries, and the Docker command would build its 0.9 GB image
-and run `npm ci` a second time in every job, with VS Code's download in a Docker volume that the
-workflow's cache step cannot keep.
+**Linux and CI.** VS Code needs an X server: `xvfb-run -a npm run test:vscode`. CI runs it in the
+reusable workflow [`.github/workflows/vscode-smoke.yml`](.github/workflows/vscode-smoke.yml), which
+`ci.yml` calls as the job `vscode-smoke`, so its result is part of the `ci-ok` gate; when it runs
+there is described in [CI and the merge gate](#ci-and-the-merge-gate). Two jobs on `ubuntu-latest`,
+the `engines.vscode` floor (read from `apps/vscode/package.json` at run time) and the newest stable
+VS Code, with the download cached per version and the screenshots uploaded as the artifacts
+`vscode-smoke-minimum` and `vscode-smoke-stable`.
+[`vscode-smoke-weekly.yml`](.github/workflows/vscode-smoke-weekly.yml) runs the same every Monday,
+to catch a new VS Code release, and when it fails opens the issue "VS Code smoke: the weekly run
+failed" or comments on the open one. Run either on demand under Actions → Run workflow, for any
+branch. CI stays on `xvfb-run` rather than the Docker command: a runner has no desktop whose focus a
+window could take, `ubuntu-latest` already has VS Code's libraries, and the Docker command would
+build its 0.9 GB image and run `npm ci` a second time in every job, with VS Code's download in a
+Docker volume that the workflow's cache step cannot keep.
 
 The test retries nothing. The shell's driver (0.3.2) reads the saved file only after the editor tab
 has turned clean, which VS Code does once its write has resolved, and only when two reads 100 ms
@@ -139,6 +142,32 @@ dirty after the save", "the saved text does not parse: …"; `Control+s` on Linu
 that saves an empty file fails with "the extension saved an empty file". The driver's failures are a
 soft assertion: the test's own checks of the saved map run after them, so a failure in another
 step, such as a theme that never switched, cannot hide a broken save.
+
+## CI and the merge gate
+
+[`ci.yml`](.github/workflows/ci.yml) runs on every pull request, on pushes to `main`, in the merge
+queue and on demand. Its last job, **`ci-ok`, is the merge gate**: together with the pull request
+title check it is the check the `main` ruleset requires, and Dependabot's auto-merge waits for it.
+`ci-ok` runs after every other job of `ci.yml`, whatever their results, and fails, with one error
+per job, when one of them failed, was cancelled or was skipped. A skip counts as a failure because
+GitHub counts a skipped required check as passed, and `e2e` and `test-browser` are skipped whenever
+`lint` or `build` fails. The one exception is a job whose own `if:` skips it on this event by
+design, listed in `SKIPPED_BY_DESIGN`: today only `dependency-review`, which runs on pull requests
+only.
+
+**A new job in `ci.yml` goes into `ci-ok`'s `needs`.** A job missing there can fail without blocking
+a merge. A job that its own `if:` skips on some events also goes into `SKIPPED_BY_DESIGN` for those
+events.
+
+**When the VS Code smoke test runs.** Its first job, `changes`, compares the commit under test with
+its base: the pull request's base commit, the commit before a push, the merge queue's base commit.
+The two VS Code jobs run only when one of the changed files is one the packed extension or the test
+depends on: `package-lock.json`, any `package.json`, `apps/vscode/**`, `packages/**`,
+`vitest.config.ts`, `.github/actions/setup/**`, `ci.yml` and the two smoke workflows
+(`RELEVANT_PATHS` in `vscode-smoke.yml`). Without a base to compare with (a new branch, a base a
+force push removed) they run. The weekly run and a run started by hand always run. When they do not
+run, the job `not-needed` ends the workflow in a success with a notice, so `ci-ok` sees a success
+and never a skip.
 
 ## Design tokens
 

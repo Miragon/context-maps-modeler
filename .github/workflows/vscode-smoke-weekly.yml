@@ -1,0 +1,41 @@
+# The VS Code smoke test every Monday, without a code change, to catch a new VS Code release that
+# breaks the extension. A failed run opens a tracking issue, or comments on the open one, since
+# nobody watches a scheduled run.
+name: VS Code smoke weekly
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vscode-smoke:
+    uses: ./.github/workflows/vscode-smoke.yml
+
+  # issues: write lives here and not in vscode-smoke.yml: GitHub rejects a called workflow whose
+  # jobs ask for more than the caller grants, even for a job that would be skipped.
+  alert:
+    needs: vscode-smoke
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "VS Code smoke: the weekly run failed"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          body="The weekly VS Code smoke test failed: $RUN_URL"
+          number=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number,title \
+            --jq "map(select(.title == env.TITLE)) | first | .number // empty")
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$body"
+          else
+            gh issue create --title "$TITLE" --body "$body"
+          fi
