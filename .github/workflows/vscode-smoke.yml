@@ -93,15 +93,21 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Resolve the VS Code version
         id: vscode
+        shell: bash
         env:
           TRACK: ${{ matrix.vscode }}
         run: |
-          if [ "$TRACK" = "minimum" ]; then
+          set -euo pipefail
+          if [[ "$TRACK" == minimum ]]; then
             version=$(node -p "require('semver').minVersion(require('./apps/vscode/package.json').engines.vscode).version")
           else
             version=$(curl -fsSL https://update.code.visualstudio.com/api/releases/stable | jq -r '.[0]')
           fi
-          echo "VS Code $version"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::No VS Code version for $TRACK: '$version'"
+            exit 1
+          fi
+          echo "VS Code $TRACK: $version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
       # The driver's download folder on Linux ($XDG_CACHE_HOME, which GitHub's runners leave unset),
       # one cache entry per version, so a new release starts a fresh one.
@@ -121,11 +127,10 @@ jobs:
 
   # With the matrix skipped the called workflow still has to end in a success: ci-ok fails on a
   # skipped vscode-smoke, since a skip looks the same as a smoke test that never got to run.
-  not-needed:
-    name: VS Code smoke not needed
+  skipped:
     needs: changes
-    if: needs.changes.outputs.run == 'false'
+    if: needs.changes.outputs.run != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - run: echo "::notice title=VS Code smoke::Nothing the smoke test depends on changed, so it did not run."
+      - run: echo "::notice title=VS Code smoke skipped::No path the packed extension or the test depends on changed."

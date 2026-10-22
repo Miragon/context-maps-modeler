@@ -117,18 +117,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Check every needed job
+      - name: Require every job to succeed
+        shell: bash
         env:
           NEEDS: ${{ toJSON(needs) }}
           # Jobs whose own if: skips them on this event: dependency-review runs on pull requests only.
           SKIPPED_BY_DESIGN: ${{ github.event_name != 'pull_request' && 'dependency-review' || '' }}
         run: |
+          set -euo pipefail
           results=$(jq -r 'to_entries[] | "\(.key) \(.value.result)"' <<< "$NEEDS")
+          if [[ -z "$results" ]]; then
+            echo "::error::ci-ok needs no job"
+            exit 1
+          fi
           failed=0
           while read -r job result; do
-            if [ "$result" = "success" ]; then
+            if [[ "$result" == success ]]; then
               echo "$job: success"
-            elif [ "$result" = "skipped" ] && [[ " $SKIPPED_BY_DESIGN " == *" $job "* ]]; then
+            elif [[ "$result" == skipped && " $SKIPPED_BY_DESIGN " == *" $job "* ]]; then
               echo "$job: skipped on $GITHUB_EVENT_NAME by design"
             else
               echo "::error::$job: $result"
