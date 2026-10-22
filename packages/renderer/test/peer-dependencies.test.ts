@@ -104,7 +104,7 @@ describe("peer dependency ranges", () => {
     expect(violations).toEqual([]);
   });
 
-  it("admit what the other peers require, so a single installed copy can serve both", () => {
+  it("admit what the other peers require, so a host can pin one version that both accept", () => {
     const violations = publishers.flatMap((workspace) =>
       peersOf(workspace).flatMap(([requiringPeer]) => {
         const requiringManifest = installedManifest(requiringPeer, workspace);
