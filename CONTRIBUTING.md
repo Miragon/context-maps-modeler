@@ -169,11 +169,12 @@ events.
 its base: the pull request's base commit, the commit before a push, the merge queue's base commit.
 The two VS Code jobs run only when one of the changed files is one the packed extension or the test
 depends on: `package-lock.json`, any `package.json`, `apps/vscode/**`, `packages/**`,
-`vitest.config.ts`, `.github/actions/setup/**`, `ci.yml` and the two smoke workflows
-(`RELEVANT_PATHS` in `vscode-smoke.yml`). Without a base to compare with (a new branch, a base a
-force push removed) they run. The weekly run and a run started by hand always run. When they do not
-run, the job `not-needed` ends the workflow in a success with a notice, so `ci-ok` sees a success
-and never a skip.
+`tsconfig.base.json`, `vitest.config.ts`, `.github/actions/setup/**`, `ci.yml` and the two smoke
+workflows (`is_relevant` in `vscode-smoke.yml`). A moved file counts under its old path too, so a
+file that leaves `apps/vscode/**` runs the smoke. Without a base to compare with (a new branch, a
+base a force push removed) they run. The weekly run and a run started by hand always run. When they
+do not run, the job `not-needed` ends the workflow in a success with a notice, so `ci-ok` sees a
+success and never a skip.
 
 ## Design tokens
 

@@ -15,50 +15,66 @@ permissions:
 
 jobs:
   changes:
-    name: Decide whether the smoke test runs
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       run: ${{ steps.decide.outputs.run }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # What the packed extension is built from (the extension, the packages it bundles from source
+      # with the compiler options of tsconfig.base.json, every manifest and the lockfile) and what
+      # runs the test (the Vitest config, the setup action and the workflows that call it).
       - id: decide
+        name: Decide whether a path the packed extension depends on changed
+        shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          PULL_REQUEST_BASE: ${{ github.event.pull_request.base.sha }}
-          PUSH_BEFORE: ${{ github.event.before }}
-          MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
-          # What the packed extension is built from (the extension, the packages it bundles, every
-          # manifest and the lockfile) and what runs the test (the Vitest config, the setup action
-          # and the workflows that call it).
-          RELEVANT_PATHS: ^(package-lock\.json|(.*/)?package\.json|apps/vscode/.*|packages/.*|vitest\.config\.ts|\.github/actions/setup/.*|\.github/workflows/(ci|vscode-smoke|vscode-smoke-weekly)\.yml)$
+          PULL_REQUEST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          MERGE_GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha }}
         run: |
+          set -euo pipefail
           decide() {
             echo "run=$1" >> "$GITHUB_OUTPUT"
             echo "$2"
           }
+          is_relevant() {
+            case "$1" in
+              package-lock.json | package.json | */package.json) ;;
+              apps/vscode/* | packages/*) ;;
+              tsconfig.base.json | vitest.config.ts | .github/actions/setup/*) ;;
+              .github/workflows/ci.yml | .github/workflows/vscode-smoke.yml | .github/workflows/vscode-smoke-weekly.yml) ;;
+              *) return 1 ;;
+            esac
+          }
           case "$EVENT_NAME" in
-            pull_request) base=$PULL_REQUEST_BASE ;;
-            push) base=$PUSH_BEFORE ;;
-            merge_group) base=$MERGE_GROUP_BASE ;;
+            pull_request) base="$PULL_REQUEST_BASE_SHA" ;;
+            push) base="$PUSH_BEFORE_SHA" ;;
+            merge_group) base="$MERGE_GROUP_BASE_SHA" ;;
             *)
-              decide true "$EVENT_NAME always runs the smoke test"
+              decide true "A $EVENT_NAME run always runs the smoke test."
               exit 0
               ;;
           esac
-          if [ -z "${base//0/}" ]; then
-            decide true "No base commit to compare with ('$base'), so the smoke test runs"
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            decide true "No base commit to compare with ('$base'): the smoke test runs."
             exit 0
           fi
-          if ! git fetch --no-tags --depth=1 origin "$base" || ! changed=$(git diff --name-only "$base" HEAD); then
-            decide true "Cannot compare with the base commit $base, so the smoke test runs"
+          # --no-renames lists a moved file under its old path too, and quotePath=false keeps a
+          # non-ASCII path unquoted, so both still match a pattern above.
+          if ! git fetch --no-tags --depth=1 origin "$base" ||
+            ! changed=$(git -c core.quotePath=false diff --no-renames --name-only "$base" HEAD); then
+            decide true "Cannot compare with the base commit $base: the smoke test runs."
             exit 0
           fi
-          relevant=$(grep -E "$RELEVANT_PATHS" <<< "$changed" || true)
-          if [ -n "$relevant" ]; then
-            decide true "Changed since $base, so the smoke test runs:"$'\n'"$relevant"
+          relevant=()
+          while IFS= read -r path; do
+            if [[ -n "$path" ]] && is_relevant "$path"; then relevant+=("$path"); fi
+          done <<< "$changed"
+          if [[ ${#relevant[@]} -gt 0 ]]; then
+            decide true "${#relevant[@]} relevant path(s) changed since $base, the smoke test runs: ${relevant[*]}"
           else
-            decide false "Nothing the smoke test depends on changed since $base"
+            decide false "No path the packed extension or the test depends on changed since $base: the smoke test is skipped."
           fi
 
   vscode-smoke:
