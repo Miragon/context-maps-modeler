@@ -134,6 +134,12 @@ window could take, `ubuntu-latest` already has VS Code's libraries, and the Dock
 build its 0.9 GB image and run `npm ci` a second time in every job, with VS Code's download in a
 Docker volume that the workflow's cache step cannot keep.
 
+**Release.** The release jobs that publish the extension to the VS Code Marketplace and to Open VSX
+smoke-test the VSIX they are about to upload, in the newest stable VS Code, before `vsce publish`
+and `ovsx publish`; a failure stops the upload. `VSCODE_SMOKE_VSIX` names that file (relative to the
+repository root): the test unpacks it instead of packing its own. The release's dry run
+(`workflow_dispatch` with `dry_run`) runs the same step.
+
 The test retries nothing. The shell's driver (0.3.2) reads the saved file only after the editor tab
 has turned clean, which VS Code does once its write has resolved, and only when two reads 100 ms
 apart agree; a text the parser rejects is read again until it has stayed the same for 1 s. A broken

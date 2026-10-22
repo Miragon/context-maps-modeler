@@ -69,10 +69,11 @@ applies to everything else (chrome, typography, selection, neutrals, the app ico
   driver's failures are a soft assertion, so another step's failure cannot hide the save's. Opt-in
   (needs a display, downloads VS Code once). CI runs it under `xvfb-run -a` in the reusable
   `vscode-smoke.yml`: `ci.yml` calls it as the job `vscode-smoke` (part of the `ci-ok` gate; it runs
-  only when a path the extension or the test depends on changed) and `vscode-smoke-weekly.yml`
-  every Monday (a failure opens a tracking issue). Locally run `npm run test:vscode:docker` (the
-  shell's `modeler-shell-vscode-docker`: the same test in a Linux container, no window, no focus
-  taken); `npm run test:vscode` opens a real VS Code window on macOS.
+  only when a path the extension or the test depends on changed), `vscode-smoke-weekly.yml` every
+  Monday (a failure opens a tracking issue), and the release smokes the very VSIX it publishes
+  (`VSCODE_SMOKE_VSIX`). Locally run `npm run test:vscode:docker` (the shell's
+  `modeler-shell-vscode-docker`: the same test in a Linux container, no window, no focus taken);
+  `npm run test:vscode` opens a real VS Code window on macOS.
 
 ## Monorepo (npm workspaces)
 
