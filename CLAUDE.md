@@ -8,14 +8,14 @@ Shared core for two targets: a web app and a VS Code extension.
 ## Design system (mandatory)
 
 All UI/visual work MUST follow the Miragon product design system — this is not optional. Source of
-truth: the **`miragon-brand:modeler-tool-design`** Claude skill (design system **1.13.0**; plugin
+truth: the **`miragon-brand:modeler-tool-design`** Claude skill (design system **1.15.0**; plugin
 `miragon-brand` from [`Miragon/corporate-identity`](https://github.com/Miragon/corporate-identity));
 install with `/plugin marketplace add Miragon/corporate-identity` +
 `/plugin install miragon-brand@miragon`.
 
 Its files are **vendored unchanged** in [`packages/renderer/src/theme/`](packages/renderer/src/theme):
-`cd-tokens.generated.css`, `cd-tokens.generated.json` and `cd-canvas.css` — never edit them, re-copy
-them from the skill's `assets/`. [`assets/context-maps.css`](packages/renderer/src/assets/context-maps.css)
+`cd-tokens.generated.css`, `cd-tokens.generated.json` and `cd-canvas.css` (the same bytes from
+1.13.0 to 1.15.0) — never edit them, re-copy them from the skill's `assets/`. [`assets/context-maps.css`](packages/renderer/src/assets/context-maps.css)
 loads them in the order of guide §10.3 (tokens in a cascade layer, then `diagram-js.css`, then
 `cd-canvas.css`) and reads only the `--cd-ui-*` roles and the mode-independent tokens: no colour
 literal, no fixed palette token. The pure-TS mirror

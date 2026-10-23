@@ -101,7 +101,7 @@ new Modeler({
 | `exportDocument()`                 | `CmDocument`                    | Rebuild the canonical model from the live canvas. |
 | `exportText()`                     | `string`                        | The canonical `.cm` text (ends in a line break).  |
 | `saveSVG()`                        | `{ svg: string }`               | Self-contained SVG snapshot (fitted viewBox).     |
-| `contentBounds()`                  | `{ x, y, width, height }`       | The content's box for a host's fit (see below).   |
+| `contentBounds()`                  | `ElementBounds` or `undefined`  | The content's box for a host's fit (see below).   |
 | `setMeta(partial)` / `getMeta()`   | — / `RootBusinessObject`        | Rename the map (an undoable command) / read it.   |
 | `attachTo(el)` / `detach()`        | `void`                          | Move the canvas in/out of the DOM (keeps state).  |
 | `clear()` / `destroy()`            | `void`                          | Empty the canvas / tear it down.                  |
