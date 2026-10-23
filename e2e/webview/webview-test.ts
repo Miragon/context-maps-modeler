@@ -21,8 +21,9 @@ void webview.ready.then(() => {
 });
 
 const MAPS: Readonly<Record<string, string>> = {
+  example: EXAMPLE_MAP,
   empty: EMPTY_MAP,
   compact: serializeDocumentText(COMPACT_MAP as CmDocument),
 };
-const map = new URLSearchParams(location.search).get("map");
-window.postMessage({ type: "init", text: (map && MAPS[map]) || EXAMPLE_MAP }, "*");
+const map = new URLSearchParams(location.search).get("map") ?? "example";
+window.postMessage({ type: "init", text: MAPS[map] ?? EXAMPLE_MAP }, "*");
