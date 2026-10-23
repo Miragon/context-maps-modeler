@@ -33,7 +33,7 @@ applies to everything else (chrome, typography, selection, neutrals, the app ico
 ## Contract and chrome
 
 - **Contract.** The renderer implements the collaborative-modeler contract of
-  [`@miragon/modeler-api`](https://www.npmjs.com/package/@miragon/modeler-api) (1.2):
+  [`@miragon/modeler-api`](https://www.npmjs.com/package/@miragon/modeler-api) (1.3):
   `createCollaborativeModeler` / `createCollaborativeViewer` in
   [`packages/renderer/src/collaborative/`](packages/renderer/src/collaborative), the text lane being
   the canonical JSON of a `.cm` file (`serializeDocumentText`, ends in one line break). Its
@@ -41,8 +41,11 @@ applies to everything else (chrome, typography, selection, neutrals, the app ico
   ([`conformance.browser.test.ts`](packages/renderer/test/browser/conformance.browser.test.ts)) with
   every hook filled; a skip or an advisory fails it. Imports are silent (the history goes without an
   event), reject without a trace (ids, coordinates, newer versions checked first) and keep unknown
-  keys. A host's view change (`setViewState`, a fit) never commits an open editor, and
-  `elements.bounds(id)` gives an element's live box.
+  keys. A host's view change (`setViewState`, a fit) never commits an open editor,
+  `elements.bounds(id)` gives an element's live box and `contentBounds()` (also on every
+  `CmBaseViewer`) the tight box around the contexts and the relationships' waypoints, read from the
+  model, which the fit after an import centres with the insets of `freeArea: { insets }` or with
+  room for the renderer's own palette (also when only `{ center }` is given; a test pins both).
 - **Chrome.** Both apps mount [`@miragon/modeler-shell`](https://www.npmjs.com/package/@miragon/modeler-shell)
   with `themes: ["light"]`: the VS Code webview on the `ide` host (menu, palette skin, zoom panel and
   keys, fit, legend slot, problems pill, status box, empty-file hint), the web app on the `web` host

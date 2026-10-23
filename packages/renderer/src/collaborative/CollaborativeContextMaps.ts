@@ -37,6 +37,7 @@ export interface CollaborativeContextMapsOptions extends CollaborativeModelerOpt
 /** The contract surface plus the wrapped diagram for host-specific wiring. */
 export interface CollaborativeContextMapsModeler extends CollaborativeModeler {
   readonly elements: ElementsSurface & { bounds(id: string): ElementBounds | undefined };
+  contentBounds(): ElementBounds | undefined;
   readonly diagram: Modeler | NavigatedViewer;
 }
 
@@ -165,6 +166,7 @@ function collaborative(
       if (destroyed || !isViewState(state)) return;
       canvas.viewbox({ x: state.x, y: state.y, width: state.width, height: state.height });
     },
+    contentBounds: () => (destroyed ? undefined : diagram.contentBounds()),
     destroy() {
       if (destroyed) return;
       try {
