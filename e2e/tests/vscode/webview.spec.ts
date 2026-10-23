@@ -211,6 +211,44 @@ test.describe("VS Code webview: protocol and chrome", () => {
     await expect.poll(() => zoom(page)).toBeCloseTo(fitted, 2);
   });
 
+  test("the fitView command frames the box the renderer reports as the map's content", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await openWebview(page);
+    // A box no context of the map spans: only the contract's contentBounds() names it.
+    const reported = { x: 5000, y: 3000, width: 200, height: 100 };
+    await page.evaluate((box) => {
+      Object.assign(window.modeler!, { contentBounds: () => box });
+    }, reported);
+
+    await postFromHost(page, { type: "command", name: "fitView" });
+
+    const framed = (box: typeof reported) => {
+      const insets = window.shell!.fitInsets();
+      const canvas = window.modeler!.diagram.get<{
+        viewbox(): { x: number; y: number; scale: number };
+        getSize(): { width: number; height: number };
+      }>("canvas");
+      const { x, y, scale } = canvas.viewbox();
+      const { width, height } = canvas.getSize();
+      return {
+        scale: Math.round(scale * 1000) / 1000,
+        offsetX: Math.round(
+          (box.x + box.width / 2 - x) * scale -
+            (insets.left + (width - insets.left - insets.right) / 2),
+        ),
+        offsetY: Math.round(
+          (box.y + box.height / 2 - y) * scale -
+            (insets.top + (height - insets.top - insets.bottom) / 2),
+        ),
+      };
+    };
+    await expect
+      .poll(() => page.evaluate(framed, reported))
+      .toEqual({ scale: 1, offsetX: 0, offsetY: 0 });
+  });
+
   test("the export commands post the map as PNG, SVG, JSON and CML", async ({ page }) => {
     await openWebview(page);
     for (const name of ["exportPng", "exportSvg", "exportJson", "exportCml"]) {

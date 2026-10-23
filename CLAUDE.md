@@ -51,8 +51,10 @@ applies to everything else (chrome, typography, selection, neutrals, the app ico
   keys, fit, legend slot, problems pill, status box, empty-file hint), the web app on the `web` host
   (the same plus File group, Share, legal line, toasts, problems list, start screen and drop zone;
   `index.html` gets the mode markup of `webHeadMarkup` from the Vite config). Neither app has a
-  stylesheet or chrome markup of its own. The renderer **never imports the shell** (ESLint and
-  dependency-cruiser enforce it); it hands the chrome structurally typed parts: `contextMapMenu`,
+  stylesheet or chrome markup of its own. `connectDiagramJs(shell, …, { modeler, isEmpty })` fits
+  to the renderer's `contentBounds()`: the webview passes its contract instance, the web app its
+  `Modeler`; neither computes bounds of its own. The renderer **never imports the shell** (ESLint
+  and dependency-cruiser enforce it); it hands the chrome structurally typed parts: `contextMapMenu`,
   `createShortcutsDialog`, `createTitleDialog`, `renderLegend`, the `cmReadOnly` canvas lock,
   keyboard creation in the free area (`freeArea: { insets }`; `freeRectInsets` stays a deprecated
   alias for one minor), `fitOnImport` and `undoRedoKeys: false` for hosts that own the history.
