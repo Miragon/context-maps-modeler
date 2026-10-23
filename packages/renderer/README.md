@@ -90,7 +90,7 @@ new Modeler({
 - `fitOnImport: false` leaves the view to a host whose chrome fits the content itself after every
   import, so the view changes once per import.
 - `freeRectInsets` (the insets function itself) is the deprecated name of `freeArea: { insets }`.
-  It is accepted through the 0.4 releases and ignored when `freeArea` is given.
+  It is accepted through the 0.5 releases and ignored when `freeArea` is given.
 
 ### Shared methods (`Viewer` / `NavigatedViewer` / `Modeler`)
 

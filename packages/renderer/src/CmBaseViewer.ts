@@ -54,7 +54,7 @@ export interface CmViewerOptions {
    * fit also keeps when only `center` is given.
    */
   freeArea?: FreeArea | undefined;
-  /** @deprecated Use `freeArea: { insets }`; accepted through the 0.4 releases, ignored next to it. */
+  /** @deprecated Use `freeArea: { insets }`; accepted through the 0.5 releases, ignored next to it. */
   freeRectInsets?: (() => FreeRectInsets) | undefined;
   /**
    * Fit the content into the view after every import (default true). Pass false when the host's

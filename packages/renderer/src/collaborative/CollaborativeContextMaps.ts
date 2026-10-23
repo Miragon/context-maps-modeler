@@ -30,7 +30,7 @@ export const CONTEXT_MAPS_NOTATION = "context-maps";
 export interface CollaborativeContextMapsOptions extends CollaborativeModelerOptions {
   /** Appended to the renderer's own modules (e.g. a host's chrome module). */
   additionalModules?: ModuleDeclaration[] | undefined;
-  /** @deprecated Use `freeArea: { insets }`; accepted through the 0.4 releases, ignored next to it. */
+  /** @deprecated Use `freeArea: { insets }`; accepted through the 0.5 releases, ignored next to it. */
   freeRectInsets?: (() => FreeRectInsets) | undefined;
 }
 
