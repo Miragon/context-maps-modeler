@@ -85,13 +85,14 @@ jobs:
       - name: Package extension
         working-directory: apps/vscode
         run: npx vsce package --no-dependencies -o context-maps-modeler.vsix
-      # Publish only a VSIX that a real VS Code has opened, edited, saved and themed: the smoke test
-      # unpacks this very file instead of packing its own.
+      # The VSIX this job uploads, in a real VS Code: a package that does not activate never ships.
       - name: Smoke-test the VSIX in VS Code
         run: xvfb-run -a npm run test:vscode
         env:
-          VSCODE_SMOKE_VSIX: apps/vscode/context-maps-modeler.vsix
           VSCODE_VERSION: stable
+          VSCODE_SMOKE_VSIX: ${{ github.workspace }}/apps/vscode/context-maps-modeler.vsix
+      # The release is already tagged when this smoke fails, so its screenshots are all there is to
+      # tell why.
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -123,13 +124,14 @@ jobs:
       - name: Package extension
         working-directory: apps/vscode
         run: npx vsce package --no-dependencies -o context-maps-modeler.vsix
-      # Publish only a VSIX that a real VS Code has opened, edited, saved and themed: the smoke test
-      # unpacks this very file instead of packing its own.
+      # The VSIX this job uploads, in a real VS Code: a package that does not activate never ships.
       - name: Smoke-test the VSIX in VS Code
         run: xvfb-run -a npm run test:vscode
         env:
-          VSCODE_SMOKE_VSIX: apps/vscode/context-maps-modeler.vsix
           VSCODE_VERSION: stable
+          VSCODE_SMOKE_VSIX: ${{ github.workspace }}/apps/vscode/context-maps-modeler.vsix
+      # The release is already tagged when this smoke fails, so its screenshots are all there is to
+      # tell why.
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -159,11 +161,12 @@ jobs:
       - name: Package extension
         working-directory: apps/vscode
         run: npx vsce package --no-dependencies -o context-maps-modeler.vsix
+      # The publish jobs' smoke, so a dry run shows it passes before a release depends on it.
       - name: Smoke-test the VSIX in VS Code
         run: xvfb-run -a npm run test:vscode
         env:
-          VSCODE_SMOKE_VSIX: apps/vscode/context-maps-modeler.vsix
           VSCODE_VERSION: stable
+          VSCODE_SMOKE_VSIX: ${{ github.workspace }}/apps/vscode/context-maps-modeler.vsix
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

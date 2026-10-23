@@ -136,9 +136,11 @@ Docker volume that the workflow's cache step cannot keep.
 
 **Release.** The release jobs that publish the extension to the VS Code Marketplace and to Open VSX
 smoke-test the VSIX they are about to upload, in the newest stable VS Code, before `vsce publish`
-and `ovsx publish`; a failure stops the upload. `VSCODE_SMOKE_VSIX` names that file (relative to the
-repository root): the test unpacks it instead of packing its own. The release's dry run
-(`workflow_dispatch` with `dry_run`) runs the same step.
+and `ovsx publish`; a failure stops the upload. `VSCODE_SMOKE_VSIX` names that file (a path
+relative to the repository root works too): the test unpacks it instead of packing its own. The
+release's dry run (`workflow_dispatch` with `dry_run`) runs the same step. When that smoke fails, its
+screenshots are uploaded as the artifact `vscode-smoke-marketplace`, `vscode-smoke-open-vsx` or
+`vscode-smoke-dry-run`.
 
 The test retries nothing. The shell's driver (0.3.2) reads the saved file only after the editor tab
 has turned clean, which VS Code does once its write has resolved, and only when two reads 100 ms

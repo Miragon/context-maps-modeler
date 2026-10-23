@@ -96,10 +96,9 @@ jobs:
   vscode-smoke:
     uses: ./.github/workflows/vscode-smoke.yml
 
-  # The merge gate, so the ruleset needs this one check instead of a list that misses new jobs.
-  # GitHub counts a skipped required check as passed, and e2e and test-browser are skipped whenever
-  # lint or build fails: ci-ok fails for every needed job that did not succeed, unless the job's own
-  # if: skips it on this event. A new job in this file goes into needs.
+  # The merge gate. A job skipped because a job it needs failed reports "skipped", and a required
+  # check counts a skip as passed, so this job, not the single ones, is the check for the ruleset to
+  # require. Every other job of this workflow belongs in its needs.
   ci-ok:
     name: ci-ok
     if: always()
@@ -121,7 +120,8 @@ jobs:
         shell: bash
         env:
           NEEDS: ${{ toJSON(needs) }}
-          # Jobs whose own if: skips them on this event: dependency-review runs on pull requests only.
+          # Jobs whose own if: leaves them out of this event: dependency-review compares the
+          # dependencies of a pull request with its base, which no other event has.
           SKIPPED_BY_DESIGN: ${{ github.event_name != 'pull_request' && 'dependency-review' || '' }}
         run: |
           set -euo pipefail
@@ -135,7 +135,7 @@ jobs:
             if [[ "$result" == success ]]; then
               echo "$job: success"
             elif [[ "$result" == skipped && " $SKIPPED_BY_DESIGN " == *" $job "* ]]; then
-              echo "$job: skipped on $GITHUB_EVENT_NAME by design"
+              echo "$job: skipped by design on this event"
             else
               echo "::error::$job: $result"
               failed=1
