@@ -116,12 +116,13 @@ keys the model does not know and relationships whose ends are not on the map com
 label edit open during an import is taken down and reopened on the element with the same id, with
 the typed text.
 
-`contentBounds()` is the tight box around the contexts and the relationships' waypoints in diagram
-coordinates, without a margin: the box a host's chrome fits to (the modeler shell's
-`connectDiagramJs` reads it from the instance it gets as `modeler`). It reads the live canvas, so a
-context created or moved counts at once, ignores zoom and scroll, and is `undefined` while the map
-is empty. The fit after an import centres this box in the free rectangle of `freeArea.insets`, or
-in the room the renderer's own palette needs.
+`contentBounds()` is the tight box around what the canvas draws of the map in diagram coordinates,
+without a margin: the contexts, wider where a team row or a subdomain type's name runs past a
+context's sides (the renderer does not cut them), and the relationships' waypoints. It is the box a
+host's chrome fits to (the modeler shell's `connectDiagramJs` reads it from the instance it gets as
+`modeler`). It reads the live canvas, so a context created or moved counts at once, ignores zoom
+and scroll, and is `undefined` while the map is empty. The fit after an import centres this box in
+the free rectangle of `freeArea.insets`, or in the room the renderer's own palette needs.
 
 A **view change never commits** an open label edit or description prompt: a pan or zoom, the user's
 or the host's (`canvas.viewbox(…)`, `setViewState`, a fit), keeps it open with the typed text and

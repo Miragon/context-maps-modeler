@@ -1,10 +1,12 @@
 import type { ElementBounds } from "@miragon/modeler-api";
+import { contextDrawnSpan } from "../draw/contextLayout.js";
 import { isCmContext, isCmRelationship } from "./di-types.js";
 
 /**
- * The tight box around what the canvas draws of the map, in diagram coordinates: every context's
- * box and every relationship's waypoints, without a margin. `undefined` while there is nothing to
- * draw.
+ * The tight box around what the canvas draws of the map, in diagram coordinates, without a margin:
+ * every context's box with the type's name and the team row where they run past its sides, and
+ * every relationship's waypoints. The markers and role chips on a relationship sit between the
+ * contexts it connects. `undefined` while there is nothing to draw.
  *
  * Read from the model, never from the SVG: Chromium measures SVG text at the scaled font size, so a
  * measured box would change with the zoom.
@@ -23,7 +25,8 @@ export function contentBoundsOf(elements: Iterable<unknown>): ElementBounds | un
   };
   for (const element of elements) {
     if (isCmContext(element)) {
-      include(element.x, element.y, element.width, element.height);
+      const span = contextDrawnSpan(element);
+      include(span.left, element.y, span.right - span.left, element.height);
     } else if (isCmRelationship(element)) {
       for (const point of element.waypoints ?? []) include(point.x, point.y, 0, 0);
     }

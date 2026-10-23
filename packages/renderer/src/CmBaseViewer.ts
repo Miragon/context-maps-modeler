@@ -225,9 +225,9 @@ export abstract class CmBaseViewer {
   }
 
   /**
-   * The tight box around the map's contexts and relationships in diagram coordinates, with no
-   * margin of its own: the box a host's chrome fits to (`@miragon/modeler-api` 1.3). It reads the
-   * live canvas and ignores zoom and scroll; `undefined` while the map is empty.
+   * The tight box around what the canvas draws of the map in diagram coordinates, with no margin
+   * of its own: the box a host's chrome fits to (`@miragon/modeler-api` 1.3). It reads the live
+   * canvas and ignores zoom and scroll; `undefined` while the map is empty.
    */
   contentBounds(): ElementBounds | undefined {
     // Before the first use and after destroy() there is no diagram, and asking for one would build

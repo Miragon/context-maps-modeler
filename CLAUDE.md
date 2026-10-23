@@ -43,9 +43,12 @@ applies to everything else (chrome, typography, selection, neutrals, the app ico
   event), reject without a trace (ids, coordinates, newer versions checked first) and keep unknown
   keys. A host's view change (`setViewState`, a fit) never commits an open editor,
   `elements.bounds(id)` gives an element's live box and `contentBounds()` (also on every
-  `CmBaseViewer`) the tight box around the contexts and the relationships' waypoints, read from the
-  model, which the fit after an import centres with the insets of `freeArea: { insets }` or with
-  room for the renderer's own palette (also when only `{ center }` is given; a test pins both).
+  `CmBaseViewer`) the tight box around what the canvas draws: the contexts, wider where a team row
+  or a type's name runs past one (`draw/contextLayout.ts` holds the geometry for the renderer and
+  the box), and the relationships' waypoints, read from the model with text measured on a canvas,
+  not from the SVG. The fit after an import centres it with the insets of `freeArea: { insets }` or
+  with room for the renderer's own palette (also when only `{ center }` is given; a test pins
+  both), and a browser test compares the box with the drawing at zoom 1.
 - **Chrome.** Both apps mount [`@miragon/modeler-shell`](https://www.npmjs.com/package/@miragon/modeler-shell)
   with `themes: ["light"]`: the VS Code webview on the `ide` host (menu, palette skin, zoom panel and
   keys, fit, legend slot, problems pill, status box, empty-file hint), the web app on the `web` host

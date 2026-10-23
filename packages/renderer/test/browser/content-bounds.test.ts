@@ -10,6 +10,7 @@ import {
   Viewer,
   createCollaborativeModeler,
   createCollaborativeViewer,
+  isCmContext,
   isCmRelationship,
   type CmBaseViewer,
   type CmElementFactory,
@@ -42,9 +43,9 @@ afterEach(() => {
   for (const wrapper of wrappers.splice(0)) wrapper.remove();
 });
 
-function host(): HTMLElement {
+function host(width = WIDTH, height = HEIGHT): HTMLElement {
   const wrapper = document.createElement("div");
-  wrapper.style.cssText = `position:absolute;left:0;top:0;width:${WIDTH}px;height:${HEIGHT}px`;
+  wrapper.style.cssText = `position:absolute;left:0;top:0;width:${width}px;height:${height}px`;
   const container = document.createElement("div");
   wrapper.append(container);
   document.body.appendChild(wrapper);
@@ -92,6 +93,78 @@ function waypointBoxes(viewer: CmBaseViewer): Box[] {
       const y = Math.min(...ys);
       return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
     });
+}
+
+/** What the canvas draws of the map at zoom 1, in diagram coordinates. */
+function drawnBox(viewer: CmBaseViewer): Box {
+  // At zoom 1: Chromium lays SVG text out at the scaled font size, so its box changes with the zoom.
+  viewer.get<Canvas>("canvas").zoom(1);
+  const registry = viewer.get<ElementRegistry>("elementRegistry");
+  let left = Infinity;
+  let top = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  for (const element of registry.getAll()) {
+    if (!isCmContext(element) && !isCmRelationship(element)) continue;
+    const visual = registry.getGraphics(element).querySelector<SVGGraphicsElement>(".djs-visual")!;
+    const box = visual.getBBox();
+    const origin = isCmContext(element) ? { x: element.x, y: element.y } : { x: 0, y: 0 };
+    left = Math.min(left, origin.x + box.x);
+    top = Math.min(top, origin.y + box.y);
+    right = Math.max(right, origin.x + box.x + box.width);
+    bottom = Math.max(bottom, origin.y + box.y + box.height);
+  }
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+/**
+ * Each side of `reported` within `tolerance` of the drawing's: it covers what is drawn (up to text
+ * metrics) and adds no margin (the box's 2px stroke is drawn 1px inside it).
+ */
+function expectTightAround(reported: Box | undefined, drawn: Box, tolerance = 1.5): void {
+  expect(reported).toBeDefined();
+  expect(Math.abs(reported!.x - drawn.x)).toBeLessThanOrEqual(tolerance);
+  expect(Math.abs(reported!.y - drawn.y)).toBeLessThanOrEqual(tolerance);
+  expect(Math.abs(reported!.x + reported!.width - (drawn.x + drawn.width))).toBeLessThanOrEqual(
+    tolerance,
+  );
+  expect(Math.abs(reported!.y + reported!.height - (drawn.y + drawn.height))).toBeLessThanOrEqual(
+    tolerance,
+  );
+}
+
+/** A team row and a type's name wider than their contexts, which the renderer does not cut. */
+function documentWithWideDecorations(): CmDocument {
+  const doc = emptyDocument("Wide decorations");
+  doc.contexts = [
+    {
+      id: "experience",
+      label: "Experience",
+      subdomainType: "core",
+      team: "Customer Experience Platform Engineering Squad",
+      position: { x: 100, y: 100 },
+      size: { width: 200, height: 110 },
+    },
+    {
+      id: "operations",
+      label: "Operations",
+      subdomainType: "supporting",
+      team: "Ops",
+      position: { x: 520, y: 119 },
+      size: { width: 120, height: 72 },
+    },
+  ];
+  doc.relationships = [
+    {
+      id: "experience_operations",
+      from: "operations",
+      to: "experience",
+      pattern: "upstream-downstream",
+      upstreamRoles: ["OHS", "PL"],
+      downstreamRoles: ["ACL"],
+    },
+  ];
+  return doc;
 }
 
 /** Where `box` stands in the container under the current viewbox, in screen px. */
@@ -208,6 +281,72 @@ describe("contentBounds", () => {
     }
     expect(editor.contentBounds()).toBeUndefined();
     expect(readOnly.contentBounds()).toBeUndefined();
+  });
+});
+
+describe("contentBounds and what the canvas draws", () => {
+  test("is the drawing's box, also where a team row or a type's name runs past its context", async () => {
+    const doc = documentWithWideDecorations();
+    const contexts = documentBox(doc);
+    const mounts: CmBaseViewer[] = [
+      mount((options) => new Modeler(options), doc),
+      mount((options) => new Viewer(options), doc),
+      mount((options) => new NavigatedViewer(options), doc),
+    ];
+    const editor = createCollaborativeModeler();
+    const readOnly = createCollaborativeViewer();
+    try {
+      for (const contract of [editor, readOnly]) {
+        contract.attachTo(host());
+        await contract.importText(serializeDocumentText(doc));
+        mounts.push(contract.diagram);
+      }
+      for (const viewer of mounts) {
+        const reported = viewer.contentBounds();
+        expectTightAround(reported, drawnBox(viewer));
+        expect(reported!.x).toBeLessThan(contexts.x);
+        expect(reported!.x + reported!.width).toBeGreaterThan(contexts.x + contexts.width);
+        expect({ y: reported!.y, height: reported!.height }).toEqual({
+          y: contexts.y,
+          height: contexts.height,
+        });
+      }
+      expect(editor.contentBounds()).toEqual(editor.diagram.contentBounds());
+      expect(readOnly.contentBounds()).toEqual(readOnly.diagram.contentBounds());
+    } finally {
+      for (const viewer of mounts) viewer.destroy();
+      editor.destroy();
+      readOnly.destroy();
+    }
+  });
+
+  test("is the drawing's box of the example, chips and markers included", () => {
+    const modeler = mount((options) => new Modeler(options), SAMPLE_DOCUMENT);
+    try {
+      expectTightAround(modeler.contentBounds(), drawnBox(modeler));
+    } finally {
+      modeler.destroy();
+    }
+  });
+
+  test("the fit on a phone keeps a team row or type name past its context in the free area", () => {
+    const doc = documentWithWideDecorations();
+    const phone = { width: 390, height: 700 };
+    const modeler = new Modeler({
+      container: host(phone.width, phone.height),
+      freeArea: { insets: () => SHELL_INSETS },
+    });
+    try {
+      modeler.importDocument(doc);
+      const drawn = drawnBox(modeler);
+      modeler.importDocument(doc);
+      const shown = onScreen(modeler, drawn);
+      expect(shown.scale).toBeLessThan(1);
+      expect(shown.x).toBeGreaterThanOrEqual(SHELL_INSETS.left - 1);
+      expect(shown.x + shown.width).toBeLessThanOrEqual(phone.width - SHELL_INSETS.right + 1);
+    } finally {
+      modeler.destroy();
+    }
   });
 });
 

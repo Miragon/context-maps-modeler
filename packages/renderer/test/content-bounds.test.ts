@@ -1,8 +1,16 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { contentBoundsOf } from "../src/model/contentBounds.js";
 
-function context(id: string, x: number, y: number, width = 200, height = 110) {
-  return { id, cmKind: "context", x, y, width, height };
+function context(
+  id: string,
+  x: number,
+  y: number,
+  width = 200,
+  height = 110,
+  decoration: { subdomainType?: string; team?: string } = {},
+) {
+  return { id, cmKind: "context", x, y, width, height, ...decoration };
 }
 
 function relationship(id: string, waypoints: Array<{ x: number; y: number }>) {
@@ -52,5 +60,32 @@ describe("contentBoundsOf", () => {
         { id: "shape-of-another-notation", x: -500, y: -500, width: 10, height: 10 },
       ]),
     ).toEqual({ x: 10, y: 10, width: 200, height: 110 });
+  });
+
+  it("leaves a context's box as it is while its type's name and team row fit inside", () => {
+    expect(
+      contentBoundsOf([
+        context("a", 100, 50, 120, 72, { subdomainType: "core", team: "Blue" }),
+        context("b", 300, 50, 200, 110, { subdomainType: "supporting", team: "Program Team" }),
+      ]),
+    ).toEqual({ x: 100, y: 50, width: 400, height: 110 });
+  });
+
+  it("widens it on both sides where the team row runs past them, centred as drawn", () => {
+    const team = "Customer Experience Platform Engineering Squad";
+    const bounds = contentBoundsOf([context("a", 100, 50, 200, 110, { team })])!;
+    // The renderer centres the people icon (14), its gap (5) and the estimated name on the box.
+    expect(bounds.x).toBeCloseTo(200 - (14 + 5 + team.length * 11 * 0.55) / 2, 9);
+    expect(bounds.x + bounds.width).toBeGreaterThan(300);
+    expect({ y: bounds.y, height: bounds.height }).toEqual({ y: 50, height: 110 });
+  });
+
+  it("widens it on the right where the type's name runs past a narrow box", () => {
+    const bounds = contentBoundsOf([
+      context("a", 100, 50, 120, 72, { subdomainType: "supporting" }),
+    ])!;
+    expect(bounds.x).toBe(100);
+    expect(bounds.x + bounds.width).toBeGreaterThan(220);
+    expect({ y: bounds.y, height: bounds.height }).toEqual({ y: 50, height: 72 });
   });
 });
