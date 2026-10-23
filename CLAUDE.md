@@ -59,16 +59,22 @@ applies to everything else (chrome, typography, selection, neutrals, the app ico
   `cmLegendModule` and the renderer's own palette rules stay for hosts that embed the renderer
   without the shell. The DOM-free packages take only types from `@miragon/modeler-api`.
 - **Kit.** `e2e/` runs the shell's conformance kit against the real webview in the shell's VS Code
-  stub (project `vscode-webview`, served from `e2e/webview/`; only the inspector is absent) and
-  against the web app (project `chromium`; the inspector and the invalid-file state are absent). Any
-  skip fails the suite.
+  stub (project `vscode-webview`, served from `e2e/webview/`; the inspector and `canvasMenuAction`
+  are absent: VS Code's own File menu opens and saves, and the Model group holds only the "Map
+  title…" dialog and the Legend checkbox) and against the web app (project `chromium`; the
+  inspector and the invalid-file state are absent). Both feed the `labelEditor` hooks
+  ([`e2e/tests/support/label-editor.ts`](e2e/tests/support/label-editor.ts): a double-click on a
+  context, typed text; a commit shows as a changed map in the web app and as an `edit` message in
+  the webview) and open `COMPACT_MAP`, which fits at 100 % in the kit's wide size: the example fits
+  at 68 % there, where the `labelEditor` case's zoom in lands on 100 % and its Cmd/Ctrl+0 step
+  cannot change the view (modeler-shell 0.4.0). Any skip fails the suite.
 - **Real VS Code.** `npm run test:vscode` (Vitest project `vscode`, in
   [`apps/vscode/test-smoke/`](apps/vscode/test-smoke)) packs the extension as the release does
   (`vsce package --no-dependencies`), unpacks the VSIX outside the repository and runs the shell's
   `runVsCodeSmoke` on it: open, the default palette edit, save (`parseDocumentText`, one more
   context, canonical text), undo and VS Code's four default themes, screenshots in
-  `test-results/vscode-smoke/`. No retry: the driver (0.3.2) reads the save only once the tab is
-  clean and the file holds still, so a failed save check is the extension's, not a race; the
+  `test-results/vscode-smoke/`. No retry: the driver (since 0.3.2) reads the save only once the
+  tab is clean and the file holds still, so a failed save check is the extension's, not a race; the
   driver's failures are a soft assertion, so another step's failure cannot hide the save's. Opt-in
   (needs a display, downloads VS Code once). CI runs it under `xvfb-run -a` in the reusable
   `vscode-smoke.yml`: `ci.yml` calls it as the job `vscode-smoke` (part of the `ci-ok` gate; it runs

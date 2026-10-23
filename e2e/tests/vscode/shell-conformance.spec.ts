@@ -5,15 +5,20 @@ import {
   type ShellSkip,
 } from "@miragon/modeler-shell/testing";
 import { WEBVIEW_THEMES } from "../../../apps/vscode/src/themes.js";
+import { contextNameEditor } from "../support/label-editor.js";
 import { INVALID_MAP } from "./support/webview.js";
 
 /**
  * The shell's conformance kit against the real VS Code webview (main.ts inside the VS Code stub):
  * geometry at three sizes, ARIA and keyboard models, chrome keys and select all that never reach
- * VS Code, keyboard creation from the palette, the read-only lock of an invalid file, the
- * appearance VS Code requests (a light-only map stays light, high contrast passes), the legend and
- * a clean teardown. Context Maps has no inspector, so the harness declares it absent and the kit
- * asserts it never shows; any skip fails the suite.
+ * VS Code, keyboard creation from the palette, a context's name editor that the shell's zoom, fit
+ * and refit leave open and unsent, the read-only lock of an invalid file, the appearance VS Code
+ * requests (a light-only map stays light, high contrast passes), the legend and its start state,
+ * and a clean teardown. Context Maps has no inspector, so the harness declares it absent and the
+ * kit asserts it never shows. The webview's menu has no File group (VS Code's own File menu opens
+ * and saves) and its Model group holds only "Map title…", a dialog, and the Legend checkbox, so
+ * no menu entry acts on the canvas: the harness declares that absent too. Any skip fails the
+ * suite.
  */
 const describeSkips = (skips: readonly ShellSkip[]): string =>
   skips.map((skip) => `${skip.hook}: ${skip.reason}`).join("; ");
@@ -27,7 +32,8 @@ test.describe("VS Code webview: shell conformance", () => {
       themes: WEBVIEW_THEMES,
       async open(page, { size, requested }) {
         await page.setViewportSize(size);
-        await page.goto(`/webview-test.html?${vsCodeStubSearch(requested)}`);
+        // The compact map, not the example: see COMPACT_MAP.
+        await page.goto(`/webview-test.html?${vsCodeStubSearch(requested)}&map=compact`);
         await page.waitForFunction(() => window.webviewReady === true);
       },
       async destroy(page) {
@@ -37,7 +43,7 @@ test.describe("VS Code webview: shell conformance", () => {
           window.shell?.destroy();
         });
       },
-      absent: ["inspector"],
+      absent: ["inspector", "canvasMenuAction"],
       show: {
         async legend(page) {
           await page.evaluate(() => window.shell?.legend?.setOpen(true));
@@ -68,6 +74,16 @@ test.describe("VS Code webview: shell conformance", () => {
           );
         },
       },
+      // A commit shows as an edit the webview posts to the extension host, which writes the file.
+      labelEditor: contextNameEditor((page) =>
+        page.evaluate(() =>
+          String(
+            (window.__modelerShellVsCodeStub?.posted ?? []).filter(
+              (message) => (message as { type?: unknown }).type === "edit",
+            ).length,
+          ),
+        ),
+      ),
     },
     test,
     {

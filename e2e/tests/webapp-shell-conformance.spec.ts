@@ -3,16 +3,18 @@ import { registerShellConformance, type ShellSkip } from "@miragon/modeler-shell
 import { SAMPLE_DOCUMENT, serializeDocumentText } from "@miragon/context-maps-schema-model";
 import { THEMES } from "../../apps/webapp/src/themes.js";
 import { mapLink, waitForApp } from "./support/app.js";
-import { MAP_WITH_FINDINGS } from "./support/maps.js";
+import { contextNameEditor } from "./support/label-editor.js";
+import { COMPACT_MAP, MAP_WITH_FINDINGS } from "./support/maps.js";
 
 /**
  * The shell's conformance kit against the real web app (the web host of guide §5.2): geometry at
- * three sizes with the primary action, the legal line, the legend and the raised zoom row, ARIA
- * and keyboard models, keyboard creation from the palette, the light-only mode under any system
- * setting, the start screen, toasts, the problems list with rows that select their relationship,
- * the drop zone and a clean teardown. The web app has no inspector and no invalid-file state (it
- * edits no text, and a file it cannot read leaves the map as it was), so the harness declares both
- * absent; any skip fails the suite.
+ * three sizes with the primary action, the legal line, the legend and the raised zoom row, the
+ * legend's start state on a phone and above it, ARIA and keyboard models, keyboard creation from
+ * the palette, a context's name editor that the shell's zoom, fit and refit leave open and
+ * uncommitted, the light-only mode under any system setting, the start screen, toasts, the
+ * problems list with rows that select their relationship, the drop zone and a clean teardown. The
+ * web app has no inspector and no invalid-file state (it edits no text, and a file it cannot read
+ * leaves the map as it was), so the harness declares both absent; any skip fails the suite.
  */
 const describeSkips = (skips: readonly ShellSkip[]): string =>
   skips.map((skip) => `${skip.hook}: ${skip.reason}`).join("; ");
@@ -40,7 +42,11 @@ test.describe("web app: shell conformance", () => {
           });
         }
         await page.setViewportSize(size);
-        await page.goto(mapLink(SAMPLE_DOCUMENT));
+        // Every open is a first visit: going to the open page's link again changes at most its
+        // fragment, which keeps the page and with it the legend's start state of the last size.
+        // The compact map, not the example: see COMPACT_MAP.
+        await page.goto("about:blank");
+        await page.goto(mapLink(COMPACT_MAP));
         await waitForApp(page);
       },
       async destroy(page) {
@@ -84,6 +90,10 @@ test.describe("web app: shell conformance", () => {
           );
         },
       },
+      // A commit shows in the map the app saves to the browser and writes into the link.
+      labelEditor: contextNameEditor((page) =>
+        page.evaluate(() => window.__cmModeler.exportText()),
+      ),
       drop: {
         accepted: {
           name: "conference.cm.json",

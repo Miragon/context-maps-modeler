@@ -2,8 +2,10 @@ import {
   installVsCodeWebviewStub,
   stubOptionsFromSearch,
 } from "@miragon/modeler-shell/testing/vscode-stub";
+import { serializeDocumentText, type CmDocument } from "@miragon/context-maps-schema-model";
 import { EMPTY_MAP, EXAMPLE_MAP } from "../../apps/vscode/src/examples.js";
 import { WEBVIEW_THEMES } from "../../apps/vscode/src/themes.js";
+import { COMPACT_MAP } from "../tests/support/maps.js";
 
 // The stub stands in for VS Code (default styles, <html> as renderWebviewHtml writes it, body
 // theme classes, acquireVsCodeApi, theme bridge) and must be in place before the webview runs.
@@ -18,5 +20,9 @@ void webview.ready.then(() => {
   window.webviewReady = true;
 });
 
+const MAPS: Readonly<Record<string, string>> = {
+  empty: EMPTY_MAP,
+  compact: serializeDocumentText(COMPACT_MAP as CmDocument),
+};
 const map = new URLSearchParams(location.search).get("map");
-window.postMessage({ type: "init", text: map === "empty" ? EMPTY_MAP : EXAMPLE_MAP }, "*");
+window.postMessage({ type: "init", text: (map && MAPS[map]) || EXAMPLE_MAP }, "*");
