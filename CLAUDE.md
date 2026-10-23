@@ -141,7 +141,8 @@ publishing the libraries. The Husky pre-commit hook runs **only** lint-staged + 
 **CI:** the job `ci-ok` in [`ci.yml`](.github/workflows/ci.yml) is the merge gate. It needs every
 other job of `ci.yml` and fails when one of them failed, was cancelled or was skipped (only
 `dependency-review` may skip, outside pull requests), so a **new job in `ci.yml` goes into `ci-ok`'s
-`needs`**. See [`CONTRIBUTING.md`](CONTRIBUTING.md#ci-and-the-merge-gate).
+`needs`**. `ci-ok` and the PR title check `validate-pr-title` are the checks for the `main` ruleset
+to require, not the single jobs. See [`CONTRIBUTING.md`](CONTRIBUTING.md#ci-and-the-merge-gate).
 
 ## Git
 
