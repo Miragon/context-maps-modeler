@@ -88,20 +88,22 @@ No build first in either way below: the test packs the extension itself.
 ```bash
 npm run test:vscode:docker                                 # the newest stable VS Code
 npm run test:vscode:docker -- --env VSCODE_VERSION=1.96.0  # here the engines.vscode floor
+npm run test:vscode:docker -- --env VSCODE_SMOKE_KEEP=1    # brings VS Code's logs back
 ```
 
 `test:vscode:docker` is the shell's command `modeler-shell-vscode-docker`: it runs
 `npm run test:vscode` in a Linux container under `xvfb-run -a`, so no VS Code window opens and
 nothing takes the focus. The host needs Docker (Docker Desktop on macOS) and `npm install`, nothing
 else. The command copies the repository into the container without `node_modules` and `.git`, so
-uncommitted changes are tested too, runs `npm ci` there and copies `test-results/vscode-smoke/` back,
-emptied first. The first run builds the image `modeler-shell-vscode-smoke:node<version>-<hash>`
-(about 0.9 GB, on the Node version that runs the command) and downloads VS Code into the Docker volume
-`modeler-shell-vscode-cache`; the image, that volume and npm's cache volume `modeler-shell-npm-cache`
-are shared by every Miragon modeler on the machine, so let a first download finish before starting a
-second run. After that a run takes 8 to 15 s, `npm ci` included. Paths in the test's output are the
-container's (`/work/…`). The container packs its own copy, so your `apps/vscode/dist` stays as it
-is. `npm run test:vscode:docker -- --help` lists the options;
+uncommitted changes are tested too, runs `npm ci` there and copies `test-results/vscode-smoke/`
+back, emptied first, with VS Code's logs in `vscode-logs/` when `VSCODE_SMOKE_KEEP=1` kept them. The
+first run builds the image `modeler-shell-vscode-smoke:node<version>-<hash>` (about 0.9 GB, on the
+Node version that runs the command) and downloads VS Code into the Docker volume
+`modeler-shell-vscode-cache`; the image, that volume and npm's cache volume
+`modeler-shell-npm-cache` are shared by every Miragon modeler on the machine, so let a first
+download finish before starting a second run. After that a run takes 8 to 15 s, `npm ci` included.
+Paths in the test's output are the container's (`/work/…`). The container packs its own copy, so
+your `apps/vscode/dist` stays as it is. `npm run test:vscode:docker -- --help` lists the options;
 `docker volume rm modeler-shell-vscode-cache modeler-shell-npm-cache` starts over.
 
 **With a window: macOS.** `npm run test:vscode` runs the same test directly on the host, for when
@@ -110,6 +112,7 @@ you want to watch VS Code:
 ```bash
 npm run test:vscode                        # the newest stable VS Code
 VSCODE_VERSION=1.96.0 npm run test:vscode  # another version, here the engines.vscode floor
+VSCODE_SMOKE_KEEP=1 npm run test:vscode    # keeps VS Code's profile and logs, prints where
 ```
 
 A VS Code window opens for a few seconds and takes the focus (Electron has no headless mode on
@@ -123,9 +126,10 @@ afterwards for a debug build. The VSIX is unpacked with `unzip` (macOS and Ubunt
 reusable workflow [`.github/workflows/vscode-smoke.yml`](.github/workflows/vscode-smoke.yml), which
 `ci.yml` calls as the job `vscode-smoke`, so its result is part of the `ci-ok` gate; when it runs
 there is described in [CI and the merge gate](#ci-and-the-merge-gate). Two jobs on `ubuntu-latest`,
-the `engines.vscode` floor (read from `apps/vscode/package.json` at run time) and the newest stable
-VS Code, with the download cached per version and the screenshots uploaded as the artifacts
-`vscode-smoke-minimum` and `vscode-smoke-stable`.
+the newest stable VS Code and the `engines.vscode` floor (read from `apps/vscode/package.json` at
+run time), with the download cached per version, the screenshots uploaded as the artifacts
+`vscode-smoke-stable` and `vscode-smoke-minimum` and, when a run failed, VS Code's logs (the jobs
+run with `VSCODE_SMOKE_KEEP=1`) as `vscode-smoke-logs-stable` or `vscode-smoke-logs-minimum`.
 [`vscode-smoke-weekly.yml`](.github/workflows/vscode-smoke-weekly.yml) runs the same every Monday,
 to catch a new VS Code release, and when it fails opens the issue "VS Code smoke: the weekly run
 failed" or comments on the open one. Run either on demand under Actions → Run workflow, for any
@@ -138,9 +142,9 @@ Docker volume that the workflow's cache step cannot keep.
 smoke-test the VSIX they are about to upload, in the newest stable VS Code, before `vsce publish`
 and `ovsx publish`; a failure stops the upload. `VSCODE_SMOKE_VSIX` names that file (a path
 relative to the repository root works too): the test unpacks it instead of packing its own. The
-release's dry run (`workflow_dispatch` with `dry_run`) runs the same step. When that smoke fails, its
-screenshots are uploaded as the artifact `vscode-smoke-marketplace`, `vscode-smoke-open-vsx` or
-`vscode-smoke-dry-run`.
+release's dry run (`workflow_dispatch` with `dry_run`) runs the same step. When that smoke fails,
+its screenshots and VS Code's logs are uploaded as the artifact `vscode-smoke-marketplace`,
+`vscode-smoke-open-vsx` or `vscode-smoke-dry-run`.
 
 The test retries nothing. The shell's driver (0.3.2) reads the saved file only after the editor tab
 has turned clean, which VS Code does once its write has resolved, and only when two reads 100 ms

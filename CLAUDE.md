@@ -71,9 +71,12 @@ applies to everything else (chrome, typography, selection, neutrals, the app ico
   `vscode-smoke.yml`: `ci.yml` calls it as the job `vscode-smoke` (part of the `ci-ok` gate; it runs
   only when a path the extension or the test depends on changed), `vscode-smoke-weekly.yml` every
   Monday (a failure opens a tracking issue), and the release smokes the very VSIX it publishes
-  (`VSCODE_SMOKE_VSIX`). Locally run `npm run test:vscode:docker` (the shell's
-  `modeler-shell-vscode-docker`: the same test in a Linux container, no window, no focus taken);
-  `npm run test:vscode` opens a real VS Code window on macOS.
+  (`VSCODE_SMOKE_VSIX`); screenshots as the `vscode-smoke-<stable|minimum>` artifacts, logs of a
+  failed run as `vscode-smoke-logs-<stable|minimum>`. Locally run `npm run test:vscode:docker` (the
+  shell's `modeler-shell-vscode-docker`: the same test in a Linux container, no window, no focus
+  taken; `-- --env VSCODE_SMOKE_KEEP=1` brings VS Code's logs back into
+  `test-results/vscode-smoke/vscode-logs/`); `npm run test:vscode` opens a real VS Code window on
+  macOS.
 
 ## Monorepo (npm workspaces)
 

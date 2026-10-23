@@ -78,6 +78,7 @@ async function openEditSaveUndoAndTheme(): Promise<void> {
     name: "context-maps",
     screenshotDir: screenshotDirectory,
     vscodeVersion: process.env.VSCODE_VERSION || undefined,
+    keepTemporaryFiles: process.env.VSCODE_SMOKE_KEEP === "1",
     log: (line) => report(`[vscode-smoke] ${line}`),
   });
   report(formatVsCodeSmoke(result));
